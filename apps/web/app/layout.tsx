@@ -3,7 +3,7 @@ import "./globals.css";
 import { Fira_Code } from "next/font/google";
 
 
-export const fira = Fira_Code({ subsets: ["cyrillic"] });
+const fira = Fira_Code({ subsets: ["cyrillic"] });
 
 export const metadata: Metadata = {
   title: "Create Next App",
