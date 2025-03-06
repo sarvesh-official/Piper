@@ -8,8 +8,8 @@ import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
 import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
-import { Spotlight } from "@/components/ui/spotlight";
 import { useTheme } from "@/provider/ThemeProvider";
+import { Spotlight } from "@/components/ui/spotlight";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
