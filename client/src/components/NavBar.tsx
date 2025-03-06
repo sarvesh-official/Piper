@@ -38,7 +38,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <h1 className="text-gradient text-xl">Piper Ai</h1>
+              <h1 className="text-gradient text-2xl">Piper Ai</h1>
             </Link>
           </div>
 
