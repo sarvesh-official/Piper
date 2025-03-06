@@ -1,0 +1,56 @@
+
+<svg width="1440" height="800" viewBox="0 0 1440 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <mask id="mask0" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="1440" height="800">
+    <rect width="1440" height="800" fill="white"/>
+  </mask>
+  <g mask="url(#mask0)">
+    <g opacity="0.1">
+      <line x1="0" y1="50" x2="1440" y2="50" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="100" x2="1440" y2="100" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="150" x2="1440" y2="150" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="200" x2="1440" y2="200" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="250" x2="1440" y2="250" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="300" x2="1440" y2="300" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="350" x2="1440" y2="350" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="400" x2="1440" y2="400" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="450" x2="1440" y2="450" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="500" x2="1440" y2="500" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="550" x2="1440" y2="550" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="600" x2="1440" y2="600" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="650" x2="1440" y2="650" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="700" x2="1440" y2="700" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="750" x2="1440" y2="750" stroke="currentColor" stroke-width="0.5"/>
+      <line x1="0" y1="800" x2="1440" y2="800" stroke="currentColor" stroke-width="0.5"/>
+      
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 50 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 100 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 150 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 200 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 250 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 300 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 350 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 400 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 450 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 500 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 550 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 600 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 650 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 700 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 750 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 800 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 850 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 900 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 950 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1000 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1050 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1100 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1150 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1200 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1250 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1300 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1350 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1400 0)" stroke="currentColor" stroke-width="0.5"/>
+      <line y1="-0.25" x2="800" y2="-0.25" transform="matrix(-4.37114e-08 1 1 4.37114e-08 1450 0)" stroke="currentColor" stroke-width="0.5"/>
+    </g>
+  </g>
+</svg>
