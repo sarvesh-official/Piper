@@ -47,7 +47,7 @@ export const Hero = () => {
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-6 animate-fade-in animation-delay-200">
             <span className="block">Learn smarter with</span>
-            <span className="mt-2 inline-block">
+            <span className="mt-2 inline-block h-24 md:h-auto">
               <TypewriterEffect
                 words={[
                   "AI-powered courses",
@@ -111,7 +111,14 @@ export const Hero = () => {
                 </div>
 
                 {/* App tabs */}
-                <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <div
+                  className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar"
+                  style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor:
+                      "var(--scrollbar-thumb) var(--scrollbar-track)"
+                  }}
+                >
                   <button
                     className={`px-4 py-3 text-sm font-medium flex items-center ${
                       activeTab === "upload"
@@ -151,7 +158,7 @@ export const Hero = () => {
                 <div className="flex-1 overflow-auto">
                   {/* Upload tab content */}
                   {activeTab === "upload" && (
-                    <div className="p-6 h-full flex flex-col items-center justify-center">
+                    <div className="p-6 h-full flex flex-col pt-52 md:pt-6 items-center justify-center">
                       <div className="w-full max-w-md p-6 border-2 border-dashed border-gray-300  dark:border-gray-700 rounded-lg flex flex-col items-center">
                         <Upload className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -183,7 +190,7 @@ export const Hero = () => {
                         </button>
                       </div>
 
-                      <div className="w-full max-w-md mt-6 ">
+                      <div className="w-full max-w-md mt-6 pb-6 md:pb-0">
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Recently Uploaded
                         </h4>

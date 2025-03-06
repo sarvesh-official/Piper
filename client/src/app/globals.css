@@ -193,6 +193,15 @@
   color: #888;
 }
 
+:root {
+  --scrollbar-thumb: #536BFA; /* Light mode thumb color */
+  --scrollbar-track: #e5e7eb; /* Light mode track color */
+}
+
+.dark {
+  --scrollbar-thumb: #00BCFF; /* Dark mode thumb color */
+  --scrollbar-track: #1E293B; /* Dark mode track color */
+}
 
 
 /* Custom Scrollbar - Light Mode */
@@ -220,6 +229,3 @@
   background: #00BCFF; /* Piper cyan */
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #7C3AED; /* Piper purple */
-}

@@ -9,7 +9,7 @@ import HowItWorks from "@/components/HowItWorks";
 import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
 import { useTheme } from "@/provider/ThemeProvider";
-import { Spotlight } from "@/components/ui/spotlight";
+import { Spotlight } from "@/components/ui/Spotlight";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function Home() {
       <Navbar />
       {
         theme == "light" ? 
-        <Spotlight className="hidden md:block bottom-3 md:left-60 md:-top-20" fill="#536bfa" /> : <Spotlight className="hidden md:block bottom-3 md:left-60 md:-top-20" fill="#00BCFF" />
+        <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#536bfa" /> : <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#00BCFF" />
       }
       <main className="flex-grow">
         <Hero />
