@@ -47,7 +47,7 @@ export const Hero = () => {
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-6 animate-fade-in animation-delay-200">
             <span className="block">Learn smarter with</span>
-            <span className="mt-2 inline-block h-24 md:h-auto">
+            <span className="mt-2 inline-block">
               <TypewriterEffect
                 words={[
                   "AI-powered courses",
@@ -111,14 +111,8 @@ export const Hero = () => {
                 </div>
 
                 {/* App tabs */}
-                <div
-                  className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar"
-                  style={{
-                    scrollbarWidth: "thin",
-                    scrollbarColor:
-                      "var(--scrollbar-thumb) var(--scrollbar-track)"
-                  }}
-                >
+                <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#00BCFF #1E293B', }}>
+                 
                   <button
                     className={`px-4 py-3 text-sm font-medium flex items-center ${
                       activeTab === "upload"

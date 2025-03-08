@@ -18,7 +18,7 @@ export default function Home() {
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 300);
   }, []);
 
   return (
@@ -31,7 +31,7 @@ export default function Home() {
       <Navbar />
       {
         theme == "light" ? 
-        <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#536bfa" /> : <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#00BCFF" />
+        <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#4F68FF" /> : <Spotlight className="-top-20 md:block bottom-3 md:left-60 md:-top-20" fill="#00BCFF" />
       }
       <main className="flex-grow">
         <Hero />

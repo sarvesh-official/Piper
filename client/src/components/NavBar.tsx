@@ -5,6 +5,7 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "@/provider/ThemeProvider";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 
 export const Navbar = () => {
 
@@ -67,13 +68,15 @@ export const Navbar = () => {
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
-          <a href="/plus?ref=top" className="group hidden md:inline-flex py-2 relative px-1.5 text-sm/6 text-piper-blue dark:text-piper-cyan"><span className="absolute inset-0 border border-dashed border-piper-blue bg-piper-blue/10 group-hover:bg-piper-blue/20 dark:border-piper-cyan"></span>Get Started<svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] right-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute bottom-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute right-[-2px] bottom-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg></a>
-            {/* <a
-              href="#get-started"
-              className="hidden md:inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-piper-blue hover:bg-piper-blue/90 transition-colors"
-            >
-              Get Started
-            </a> */}
+
+          <SignedOut>
+          <Link href="/sign-in" className="group hidden md:inline-flex py-2 relative px-1.5 text-sm/6 text-piper-blue dark:text-piper-cyan"><span className="absolute inset-0 border border-dashed border-piper-blue bg-piper-blue/10 group-hover:bg-piper-blue/20 dark:border-piper-cyan"></span>Get Started<svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] right-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute bottom-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute right-[-2px] bottom-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg></Link>
+          </SignedOut>
+
+          <SignedIn>
+          <Link href="/dashboard" className="group hidden md:inline-flex py-2 relative px-1.5 text-sm/6 text-piper-blue dark:text-piper-cyan"><span className="absolute inset-0 border border-dashed border-piper-blue bg-piper-blue/10 group-hover:bg-piper-blue/20 dark:border-piper-cyan"></span>Dashboard<svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] right-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute bottom-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute right-[-2px] bottom-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg></Link>
+          
+          </SignedIn>
             <button
               className="md:hidden text-gray-700 dark:text-gray-300"
               onClick={() => setIsMenuOpen(!isMenuOpen)}

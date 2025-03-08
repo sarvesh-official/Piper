@@ -128,7 +128,7 @@ const CourseGenerator = () => {
               </div>
               
               <div className="pt-4">
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="hidden md:flex flex-wrap gap-2 mb-6">
                   <span className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-800 dark:text-gray-200 flex items-center">
                     <Check className="h-3 w-3 mr-1 text-piper-blue dark:text-piper-cyan" />
                     Include quizzes
@@ -149,7 +149,7 @@ const CourseGenerator = () => {
                 
                 <button className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors shadow-md hover:shadow-lg">
                   <BookOpen className="mr-2 h-5 w-5" />
-                  Generate Custom Course
+                  Generate Course
                 </button>
               </div>
             </div>

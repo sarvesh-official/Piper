@@ -11,7 +11,7 @@ const Loading = () => {
     getLoader();
   }, []);
   return (
-    <div className="h-screen pt-24 w-full flex md:items-center md:justify-center bg-background text-foreground relative overflow-hidden bg-grid-black/[0.2] dark:bg-grid-white/[0.02] ">
+    <div className="h-screen w-full flex items-center justify-center">
       {" "}
           {/* <div className="rounded-full h-20 w-20 bg-primary-3 animate-ping"></div> */}
           <l-trio
@@ -19,7 +19,7 @@ const Loading = () => {
             stroke-length="0.15"
             bg-opacity="0.1"
             speed="1.4"
-            color="#00BCFF"
+            color="#536BFA"
           ></l-trio>
         </div>
 
