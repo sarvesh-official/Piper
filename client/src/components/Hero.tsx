@@ -14,6 +14,8 @@ import {
 import { useState } from "react";
 import TypewriterEffect from "./ui/TypewriteEffect";
 import Link from "next/link";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { Button } from "./ui/button";
 
 export const Hero = () => {
   const [activeTab, setActiveTab] = useState<"upload" | "chat" | "quiz">(
@@ -67,13 +69,24 @@ export const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-10 animate-fade-in animation-delay-500">
+           <SignedOut>
             <Link
-              href="#get-started"
+              href={"/sign-in"}
               className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan/90 hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/80 transition-colors shadow-md hover:shadow-lg"
-            >
+              >
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
+              </SignedOut> 
+           <SignedIn>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan/90 hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/80 transition-colors shadow-md hover:shadow-lg"
+              >
+              Dashboard
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+              </SignedIn> 
             <Link
               href="#how-it-works"
               className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-700 text-base font-medium rounded-md text-gray-900 dark:text-white bg-white dark:bg-piper-darkblue hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

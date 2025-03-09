@@ -75,8 +75,8 @@ export const Navbar = () => {
 
           <SignedIn>
           <Link href="/dashboard" className="group hidden md:inline-flex py-2 relative px-1.5 text-sm/6 text-piper-blue dark:text-piper-cyan"><span className="absolute inset-0 border border-dashed border-piper-blue bg-piper-blue/10 group-hover:bg-piper-blue/20 dark:border-piper-cyan"></span>Dashboard<svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute top-[-2px] right-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute bottom-[-2px] left-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg><svg width="5" height="5" viewBox="0 0 5 5" className="absolute right-[-2px] bottom-[-2px] fill-piper-blue dark:fill-piper-cyan"><path d="M2 0h1v2h2v1h-2v2h-1v-2h-2v-1h2z"></path></svg></Link>
-          
           </SignedIn>
+          
             <button
               className="md:hidden text-gray-700 dark:text-gray-300"
               onClick={() => setIsMenuOpen(!isMenuOpen)}

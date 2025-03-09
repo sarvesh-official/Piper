@@ -17,13 +17,12 @@ import {
   ChevronDown
 } from "lucide-react";
 
-// Make sure icons are valid React elements
 const renderIcon = (icon: React.ReactNode) => {
-  // Check if icon is a valid React element
+
   if (React.isValidElement(icon)) {
     return icon;
   }
-  return icon; // Return the icon directly as lucide-react components are valid React elements
+  return icon; 
 };
 
 type NavItem = {
@@ -42,10 +41,8 @@ const navItems: NavItem[] = [
   {
     icon: <MessageCircle size={20} />,
     name: "Chat with Docs",
-    subItems: [
-      { name: "New Chat", path: "/rag/new" },
-      { name: "Saved Chats", path: "/rag/history" }
-    ]
+    path: "/piper/chat"
+
   },
   {
     icon: <GraduationCap size={20} />,

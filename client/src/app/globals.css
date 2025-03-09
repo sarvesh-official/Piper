@@ -254,6 +254,9 @@
 
 }
 
+.cl-headerTitle{
+  display: none;
+}
 .cl-internal-1dauvpw{
   display:none;
 }
@@ -343,4 +346,50 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
+
+.dark .bg-hero{
+  background-image: url("../../public/hero-background.png");
+  background-position: center;
+  background-size: cover;
+}
+
+.bg-hero {
+  position: relative;
+  background-image: url("../../public/light.jpg");
+  background-position: center;
+  background-size: cover;
+}
+
+.bg-hero::before {
+  content: "";
+  border-radius: 20px;
+  position: absolute;
+  inset: 0;
+  background: rgba(46, 44, 44, 0.4);
+  z-index: 1;
+}
+
+/* Add this rule to disable the overlay in dark mode */
+.dark .bg-hero::before {
+  display: none;
+}
+
+.bg-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+.glassmorphism {
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.glassmorphism2 {
+  background: rgba(18, 17, 17, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
 }

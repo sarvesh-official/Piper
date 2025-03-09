@@ -280,6 +280,21 @@ export default function UserInfoCard() {
           </h4>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
+            <div className="col-span-2">
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                Bio
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {typeof user?.unsafeMetadata.bio === "string" &&
+                  user?.unsafeMetadata.bio != "" ? (
+                    user.unsafeMetadata.bio
+                  ) : (
+                    <span className="text-xs font-light">
+                      Bio not set
+                    </span>
+                  )}
+              </p>
+            </div>
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
                 First Name
@@ -307,21 +322,6 @@ export default function UserInfoCard() {
               </p>
             </div>
 
-            <div className="col-span-2">
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {typeof user?.unsafeMetadata.bio === "string" &&
-                  user?.unsafeMetadata.bio != "" ? (
-                    user.unsafeMetadata.bio
-                  ) : (
-                    <span className="text-xs font-light">
-                      Bio not set
-                    </span>
-                  )}
-              </p>
-            </div>
           </div>
         </div>
 
