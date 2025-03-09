@@ -37,23 +37,23 @@ const navItems: NavItem[] = [
   {
     icon: <LayoutGrid size={20} />,
     name: "Dashboard",
-    path: "/dashboard",
+    path: "/dashboard"
   },
   {
     icon: <MessageCircle size={20} />,
     name: "Chat with Docs",
     subItems: [
       { name: "New Chat", path: "/rag/new" },
-      { name: "Saved Chats", path: "/rag/history" },
-    ],
+      { name: "Saved Chats", path: "/rag/history" }
+    ]
   },
   {
     icon: <GraduationCap size={20} />,
     name: "Course Generator",
     subItems: [
       { name: "Create Course", path: "/course-generator/create" },
-      { name: "My Courses", path: "/course-generator/my-courses" },
-    ],
+      { name: "My Courses", path: "/course-generator/my-courses" }
+    ]
   },
   {
     icon: <BookOpen size={20} />,
@@ -61,35 +61,35 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Active Courses", path: "/learning/active" },
       { name: "Completed Courses", path: "/learning/completed" },
-      { name: "Bookmarked", path: "/learning/bookmarked" },
-    ],
+      { name: "Bookmarked", path: "/learning/bookmarked" }
+    ]
   },
   {
     icon: <FileText size={20} />,
     name: "My Documents",
     path: "/my-docs"
-  },
+  }
 ];
 
 const othersItems: NavItem[] = [
   {
     icon: <UserCircle size={20} />,
     name: "Profile",
-    path: "/profile",
+    path: "/profile"
   },
   {
     icon: <Settings size={20} />,
     name: "Settings",
     subItems: [
       { name: "Account Settings", path: "/settings/account" },
-      { name: "Privacy", path: "/settings/privacy" },
-    ],
+      { name: "Privacy", path: "/settings/privacy" }
+    ]
   },
   {
     icon: <LogOut size={20} color="red" />,
     name: "Logout",
-    path: "/logout",
-  },
+    path: "/logout"
+  }
 ];
 
 const AppSidebar: React.FC = () => {
@@ -144,7 +144,10 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
-                className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group menu-item-active hover:bg-gray-50 hover:text-piper-blue hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] dark:text-gray-300 ${nav.name == "Logout" && "hover:bg-red-50/50 dark:hover:bg-red-500/30"}`}
+                className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group menu-item-active hover:bg-gray-50 hover:text-piper-blue hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] dark:text-gray-300 ${
+                  nav.name == "Logout" &&
+                  "hover:bg-red-50/50 dark:hover:bg-red-500/30"
+                }`}
               >
                 <span
                   className={`${
@@ -156,7 +159,13 @@ const AppSidebar: React.FC = () => {
                   {renderIcon(nav.icon)}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text  ${nav.name == "Logout" && "text-[red] dark:text-[red]"}`}>{nav.name}</span>
+                  <span
+                    className={`menu-item-text  ${
+                      nav.name == "Logout" && "text-[red] dark:text-[red]"
+                    }`}
+                  >
+                    {nav.name}
+                  </span>
                 )}
               </Link>
             )
@@ -171,7 +180,7 @@ const AppSidebar: React.FC = () => {
                 height:
                   openSubmenu?.type === menuType && openSubmenu?.index === index
                     ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
+                    : "0px"
               }}
             >
               <ul className="mt-2 space-y-1 ml-9">
@@ -243,7 +252,7 @@ const AppSidebar: React.FC = () => {
             if (isActive(subItem.path)) {
               setOpenSubmenu({
                 type: menuType as "main" | "others",
-                index,
+                index
               });
               submenuMatched = true;
             }
@@ -265,7 +274,7 @@ const AppSidebar: React.FC = () => {
       if (subMenuRefs.current[key]) {
         setSubMenuHeight((prevHeights) => ({
           ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
+          [key]: subMenuRefs.current[key]?.scrollHeight || 0
         }));
       }
     }
@@ -307,12 +316,9 @@ const AppSidebar: React.FC = () => {
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-               <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <h1 className="text-gradient text-2xl">Piper Ai</h1>
-            </Link>
-          </div>
-
+              <div className="flex items-center">
+                  <h1 className="text-gradient text-2xl">Piper Ai</h1>
+              </div>
             </>
           ) : (
             <Image

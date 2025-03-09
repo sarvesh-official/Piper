@@ -162,7 +162,7 @@ export default function NotificationDropdown() {
                 <Image
                   width={40}
                   height={40}
-                  src="/images/user/user-04.jpg"
+                  src="/piper-mascot.svg"
                   alt="User"
                   className="w-full overflow-hidden rounded-full"
                 />
