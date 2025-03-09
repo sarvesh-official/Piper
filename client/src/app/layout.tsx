@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/provider/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SidebarProvider } from "@/context/SidebarContext";
+import { ToastContainer } from 'react-toastify';
+
 
 const inter = Fira_Code({ subsets: ["cyrillic"] });
 
@@ -26,6 +28,8 @@ export default function RootLayout({
           <ThemeProvider>
             <SidebarProvider>
               {children}
+              <ToastContainer />
+
             </SidebarProvider>
           </ThemeProvider>
         </body>

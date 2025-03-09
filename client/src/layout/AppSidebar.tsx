@@ -75,7 +75,7 @@ const othersItems: NavItem[] = [
   {
     icon: <UserCircle size={20} />,
     name: "Profile",
-    path: "/profile"
+    path: "/dashboard/profile"
   },
   {
     icon: <Settings size={20} />,
@@ -87,7 +87,7 @@ const othersItems: NavItem[] = [
   },
   {
     icon: <LogOut size={20} color="red" />,
-    name: "Logout",
+    name: "Signout",
     path: "/logout"
   }
 ];
@@ -145,7 +145,7 @@ const AppSidebar: React.FC = () => {
               <Link
                 href={nav.path}
                 className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group menu-item-active hover:bg-gray-50 hover:text-piper-blue hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] dark:text-gray-300 ${
-                  nav.name == "Logout" &&
+                  nav.name == "Signout" &&
                   "hover:bg-red-50/50 dark:hover:bg-red-500/30"
                 }`}
               >
@@ -161,7 +161,7 @@ const AppSidebar: React.FC = () => {
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span
                     className={`menu-item-text  ${
-                      nav.name == "Logout" && "text-[red] dark:text-[red]"
+                      nav.name == "Signout" && "text-[red] dark:text-[red]"
                     }`}
                   >
                     {nav.name}
