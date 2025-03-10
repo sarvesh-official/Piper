@@ -33,7 +33,11 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-
+   {
+      icon: <LayoutGrid size={20} />,
+      name: "Dashboard",
+      path: "/dashboard"
+    },
   {
     icon: <MessageCircle size={20} />,
     name: "Chat with Docs",
@@ -44,7 +48,7 @@ const navItems: NavItem[] = [
   {
     icon: <FileText size={20} />,
     name: "My Documents",
-    path: "/my-docs"
+    path: "/piper/my-docs"
   }
 ];
 

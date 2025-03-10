@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
   {
     icon: <FileText size={20} />,
     name: "My Documents",
-    path: "/my-docs"
+    path: "/piper/my-docs"
   }
 ];
 

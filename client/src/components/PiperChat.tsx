@@ -113,7 +113,7 @@ export default function PiperChat() {
 
   // Helper function to calculate score without relying on quizSubmitted state
   const calculateRawScore = () => {
-    return userAnswers.reduce((score, answer, index) => {
+    return userAnswers.reduce((score: number, answer: number | null, index: number) => {
       // Skip null answers (unanswered questions)
       if (answer === null) return score;
       
@@ -126,7 +126,7 @@ export default function PiperChat() {
       
       // Convert to strings for consistent comparison if types don't match
       return String(answer) === String(correctAnswer) ? score + 1 : score;
-    }, 0 as number);
+    }, 0);
   };
 
   // Function to calculate score (for display purposes)
