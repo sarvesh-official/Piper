@@ -4,7 +4,7 @@ import UserMetaCard from "@/components/user-profile/UserMetaCard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard | Piper Ai",
+  title: "Profile | Piper Ai",
   description:
     "Piper is an AI-powered knowledge assistant that helps users chat with documents, extract insights, and generate structured learning paths.",
 };

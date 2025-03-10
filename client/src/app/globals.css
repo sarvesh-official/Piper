@@ -382,6 +382,8 @@
 
 .glassmorphism {
   padding: 5px;
+  padding-top: 1px;
+  margin-bottom: 5px;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);

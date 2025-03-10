@@ -126,10 +126,10 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         </ul>
         <button
           onClick={()=> signOut()}
-          className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-red-500 rounded-lg group text-theme-sm hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-white/5 dark:hover:text-red-300"
+          className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-red-600 rounded-lg group text-theme-sm hover:bg-red-100 hover:text-red-700 dark:text-red-500 dark:hover:bg-white/5 dark:hover:text-red-700"
         >
           <svg
-            className="fill-red-500 group-hover:fill-red-700 dark:group-hover:fill-red-300"
+            className="fill-red-500 group-hover:fill-red-700 dark:group-hover:fill-red-700"
             width="24"
             height="24"
             viewBox="0 0 24 24"
