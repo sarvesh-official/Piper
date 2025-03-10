@@ -34,6 +34,7 @@ export default function PiperChat() {
   const [quizSubmitted, setQuizSubmitted] = useState(false)
   const [quizGenerated, setQuizGenerated] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [difficultyLevel, setDifficultyLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
   
   // Function to trigger confetti fireworks
   const triggerConfettiFireworks = () => {
@@ -383,8 +384,13 @@ export default function PiperChat() {
     }
   };
 
+  // Handler for difficulty level selection
+  const handleDifficultyChange = (level: "beginner" | "intermediate" | "advanced") => {
+    setDifficultyLevel(level);
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh]">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh] max-w-5xl mx-auto">
       {/* Tab navigation */}
       <div
         className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar"
@@ -634,11 +640,36 @@ export default function PiperChat() {
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
                       <div className="flex flex-wrap gap-2">
-                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Beginner</button>
-                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-primary text-xs sm:text-sm font-medium text-primary-foreground">
+                        <button 
+                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                            difficultyLevel === "beginner" 
+                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                              : "bg-accent"
+                          }`}
+                          onClick={() => handleDifficultyChange("beginner")}
+                        >
+                          Beginner
+                        </button>
+                        <button 
+                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                            difficultyLevel === "intermediate" 
+                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                              : "bg-accent"
+                          }`}
+                          onClick={() => handleDifficultyChange("intermediate")}
+                        >
                           Intermediate
                         </button>
-                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Advanced</button>
+                        <button 
+                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                            difficultyLevel === "advanced" 
+                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                              : "bg-accent"
+                          }`}
+                          onClick={() => handleDifficultyChange("advanced")}
+                        >
+                          Advanced
+                        </button>
                       </div>
                     </div>
 
@@ -652,10 +683,6 @@ export default function PiperChat() {
                         <div className="flex items-center">
                           <input type="checkbox" className="mr-1.5" defaultChecked />
                           <span className="text-xs sm:text-sm">True/False</span>
-                        </div>
-                        <div className="flex items-center">
-                          <input type="checkbox" className="mr-1.5" />
-                          <span className="text-xs sm:text-sm">Short Answer</span>
                         </div>
                       </div>
                     </div>

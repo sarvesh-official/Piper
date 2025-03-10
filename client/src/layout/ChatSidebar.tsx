@@ -14,11 +14,12 @@ import {
   Settings,
   LogOut,
   MoreHorizontal,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  PlusCircle
 } from "lucide-react";
 
 const renderIcon = (icon: React.ReactNode) => {
-
   if (React.isValidElement(icon)) {
     return icon;
   }
@@ -32,19 +33,65 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
-   {
-      icon: <LayoutGrid size={20} />,
-      name: "Dashboard",
-      path: "/dashboard"
-    },
+// Dummy chat history data
+const chatHistory = [
   {
-    icon: <MessageCircle size={20} />,
-    name: "Chat with Docs",
-    path: "/piper/chat"
-
+    id: 1,
+    title: "Research on AI trends",
+    timestamp: "2023-11-10T14:30:00",
+    preview: "What are the latest trends in artificial intelligence?"
   },
-    
+  {
+    id: 2,
+    title: "Marketing strategy document",
+    timestamp: "2023-11-09T09:15:00",
+    preview: "Help me analyze this marketing strategy document"
+  },
+  {
+    id: 3,
+    title: "Financial report Q3",
+    timestamp: "2023-11-07T16:45:00",
+    preview: "Can you summarize the key points in this financial report?"
+  },
+  {
+    id: 4,
+    title: "Project proposal review",
+    timestamp: "2023-11-05T11:20:00",
+    preview: "Review this project proposal and provide feedback"
+  },
+  {
+    id: 1,
+    title: "Research on AI trends",
+    timestamp: "2023-11-10T14:30:00",
+    preview: "What are the latest trends in artificial intelligence?"
+  },
+  {
+    id: 2,
+    title: "Marketing strategy document",
+    timestamp: "2023-11-09T09:15:00",
+    preview: "Help me analyze this marketing strategy document"
+  },
+  {
+    id: 3,
+    title: "Financial report Q3",
+    timestamp: "2023-11-07T16:45:00",
+    preview: "Can you summarize the key points in this financial report?"
+  },
+  {
+    id: 4,
+    title: "Project proposal review",
+    timestamp: "2023-11-05T11:20:00",
+    preview: "Review this project proposal and provide feedback"
+  }
+];
+
+// Simplified main nav - just Dashboard and My Documents
+const navItems: NavItem[] = [
+  {
+    icon: <LayoutGrid size={20} />,
+    name: "Dashboard",
+    path: "/dashboard"
+  },
   {
     icon: <FileText size={20} />,
     name: "My Documents",
@@ -274,6 +321,49 @@ const ChatSideBar: React.FC = () => {
     });
   };
 
+  // New function to render chat history items
+  const renderChatHistory = () => (
+    <>
+      <div className="mb-3">
+        <Link
+          href="/piper/chat"
+          className="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium bg-piper-blue hover:bg-piper-blue/90 text-white rounded-lg dark:bg-piper-cyan dark:text-gray-900 dark:hover:bg-piper-cyan/90 transition-colors"
+        >
+          <PlusCircle size={18} />
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <span>New Chat</span>
+          )}
+        </Link>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {chatHistory.map((chat) => (
+          <li key={chat.id}>
+            <Link
+              href={`/piper/chat/${chat.id}`}
+              className="menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group hover:bg-gray-50 hover:text-piper-blue dark:text-gray-300 hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12]"
+            >
+              <span className="text-gray-500">
+                <MessageCircle size={18} />
+              </span>
+              {(isExpanded || isHovered || isMobileOpen) && (
+                <div className="flex-1 truncate">
+                  <p className="truncate">{chat.title}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {new Date(chat.timestamp).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'numeric',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
@@ -289,8 +379,9 @@ const ChatSideBar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Logo section */}
       <div
-        className={`py-8 flex  ${
+        className={`py-5 flex ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
@@ -298,7 +389,7 @@ const ChatSideBar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <div className="flex items-center">
-                  <h1 className="text-gradient text-2xl">Piper Ai</h1>
+                <h1 className="text-gradient text-2xl">Piper Ai</h1>
               </div>
             </>
           ) : (
@@ -312,44 +403,65 @@ const ChatSideBar: React.FC = () => {
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <MoreHorizontal size={20} />
-                )}
-              </h2>
-              {renderMenuItems(navItems, "main")}
-            </div>
-
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
-                ) : (
-                  <MoreHorizontal size={20} />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
-            </div>
+      
+      {/* Main Navigation section - fixed */}
+      <div className="mb-6 mt-6">
+          <h2
+            className={`mb-3 text-xs uppercase flex leading-[20px] text-gray-400 ${
+              !isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "justify-start"
+            }`}
+          >
+            {isExpanded || isHovered || isMobileOpen ? (
+              "Menu"
+            ) : (
+              <MoreHorizontal size={20} />
+            )}
+          </h2>
+          {renderMenuItems(navItems, "main")}
+        </div>
+      {/* Restructured content with fixed and scrollable sections */}
+      <div className="flex flex-col h-full">
+        {/* Chat History section - scrollable */}
+        <div>
+          <h2
+            className={`mb-3 text-xs uppercase flex leading-[20px] text-gray-400 ${
+              !isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "justify-start"
+            }`}
+          >
+            {isExpanded || isHovered || isMobileOpen ? (
+              "Chat History"
+            ) : (
+              <Clock size={20} />
+            )}
+          </h2>
+          <div className="overflow-y-auto max-h-[40vh] no-scrollbar pr-1">
+            {renderChatHistory()}
           </div>
-        </nav>
+        </div>
+        
+        
+        
+        {/* Fixed bottom section for "Others" */}
+        <div className="py-4 border-t border-gray-200 dark:border-gray-800 mt-auto">
+          <h2
+            className={`mb-3 text-xs uppercase flex leading-[20px] text-gray-400 ${
+              !isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "justify-start"
+            }`}
+          >
+            {isExpanded || isHovered || isMobileOpen ? (
+              "Others"
+            ) : (
+              <MoreHorizontal size={20} />
+            )}
+          </h2>
+          {renderMenuItems(othersItems, "others")}
+        </div>
       </div>
     </aside>
   );

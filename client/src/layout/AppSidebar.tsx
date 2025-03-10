@@ -29,7 +29,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string; }[];
 };
 
 const navItems: NavItem[] = [
@@ -42,29 +42,25 @@ const navItems: NavItem[] = [
     icon: <MessageCircle size={20} />,
     name: "Chat with Docs",
     path: "/piper/chat"
-
   },
   {
     icon: <GraduationCap size={20} />,
     name: "Course Generator",
-    subItems: [
-      { name: "Create Course", path: "/course-generator/create" },
-      { name: "My Courses", path: "/course-generator/my-courses" }
-    ]
-  },
-  {
-    icon: <BookOpen size={20} />,
-    name: "My Learning",
-    subItems: [
-      { name: "Active Courses", path: "/learning/active" },
-      { name: "Completed Courses", path: "/learning/completed" },
-      { name: "Bookmarked", path: "/learning/bookmarked" }
-    ]
+    path: "/piper/course/generate"
   },
   {
     icon: <FileText size={20} />,
     name: "My Documents",
     path: "/piper/my-docs"
+  },
+  {
+    icon: <BookOpen size={20} />,
+    name: "My Learning",
+    subItems: [
+      { name: "All Courses", path: "/piper/learning/all" },
+      { name: "Active Courses", path: "/piper/learning/active" },
+      { name: "Bookmarked Courses", path: "/piper/learning/bookmarked" } 
+    ]
   }
 ];
 
@@ -141,7 +137,11 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
-                className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group menu-item-active hover:bg-gray-50 hover:text-piper-blue hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] dark:text-gray-300 ${
+                className={`menu-item relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group ${
+                  isActive(nav.path)
+                    ? "bg-piper-blue/[0.12] text-piper-blue dark:bg-piper-cyan/[0.12] dark:text-piper-cyan"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-piper-blue dark:text-gray-300 hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12]"
+                } ${
                   nav.name == "Signout" &&
                   "hover:bg-red-50/50 dark:hover:bg-red-500/30"
                 }`}
@@ -149,16 +149,20 @@ const AppSidebar: React.FC = () => {
                 <span
                   className={`${
                     isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
+                      ? "menu-item-icon-active bg-piper-blue/[0.12] text-piper-blue dark:text-piper-cyan dark:bg-piper-cyan/[0.12]"
+                      : "menu-item-icon-inactive text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
                   }`}
                 >
                   {renderIcon(nav.icon)}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span
-                    className={`menu-item-text  ${
-                      nav.name == "Signout" && "text-[red] dark:text-[red]"
+                    className={`menu-item-text ${
+                      isActive(nav.path)
+                        ? "text-piper-blue dark:text-piper-cyan"
+                        : nav.name == "Signout"
+                        ? "text-[red] dark:text-[red]"
+                        : ""
                     }`}
                   >
                     {nav.name}
@@ -187,35 +191,11 @@ const AppSidebar: React.FC = () => {
                       href={subItem.path}
                       className={`menu-dropdown-item relative flex hover:text-piper-blue hover:bg-gray-50 dark:hover:text-piper-cyan dark:hover:bg-piper-darkblue/[0.12] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
                         isActive(subItem.path)
-                          ? "menu-dropdown-item-active bg-brand-50 text-piper-blue dark:bg-piper-blue/[0.12] dark:text-piper-lightblue"
+                          ? "menu-dropdown-item-active bg-piper-blue/[0.12] text-piper-blue dark:bg-piper-cyan/[0.12] dark:text-piper-cyan"
                           : "menu-dropdown-item-inactive dark:text-piper-lightblue"
                       }`}
                     >
                       {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
                     </Link>
                   </li>
                 ))}
@@ -328,8 +308,8 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar flex-grow">
+        <nav>
           <div className="flex flex-col gap-4">
             <div>
               <h2
@@ -347,25 +327,28 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(navItems, "main")}
             </div>
-
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
-                ) : (
-                  <MoreHorizontal size={20} />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
-            </div>
           </div>
         </nav>
+      </div>
+      
+      {/* Others section fixed at bottom */}
+      <div className="mt-auto pb-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div>
+          <h2
+            className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+              !isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "justify-start"
+            }`}
+          >
+            {isExpanded || isHovered || isMobileOpen ? (
+              "Others"
+            ) : (
+              <MoreHorizontal size={20} />
+            )}
+          </h2>
+          {renderMenuItems(othersItems, "others")}
+        </div>
       </div>
     </aside>
   );

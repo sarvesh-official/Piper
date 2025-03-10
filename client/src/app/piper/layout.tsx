@@ -15,7 +15,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const pathname = usePathname();
 
-  const isChatRoute = pathname === "/piper/chat";
+  const isChatRoute = pathname.startsWith("/piper/chat");
   const SidebarComponent = isChatRoute ? <ChatSideBar /> : <AppSidebar />;
 
   const mainContentMargin = isMobileOpen
