@@ -1,15 +1,158 @@
 "use client"
 import { useState, useRef } from "react"
+import { jsPDF } from "jspdf"
+import "jspdf-autotable" // Optional, for better table formatting
+import confetti from "canvas-confetti"
+import {dummyQuiz} from "@/data/quiz"
 
-import { Upload, MessageCircle, CheckSquare, FileText, Send, User, ChevronDown, X, FileImage, FileCode, FileSpreadsheet, File, ScrollText } from "lucide-react"
+import { Upload, MessageCircle, CheckSquare, FileText, Send, User, X, FileImage, FileCode, FileSpreadsheet, ScrollText, AlertTriangle, CheckCircle2, XCircle, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 
+// Quiz question type definition
+export type QuizQuestion = {
+  id: number;
+  type: "mcq" | "true_false";
+  question: string;
+  options: string[];
+  correctAnswer: string | number;
+  explanation?: string;
+}
+
+
 export default function PiperChat() {
-  const [activeTab, setActiveTab] = useState("upload")
+  const [activeTab, setActiveTab] = useState<"upload" | "chat" | "quiz">("upload")
   const [files, setFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
+  
+  // Quiz states
+  const [quizActive, setQuizActive] = useState(false)
+  const [currentQuiz, setCurrentQuiz] = useState<QuizQuestion[]>([])
+  const [userAnswers, setUserAnswers] = useState<(number | null)[]>([])
+  const [showResults, setShowResults] = useState(false)
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const [quizGenerated, setQuizGenerated] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  
+  // Function to trigger confetti fireworks
+  const triggerConfettiFireworks = () => {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
+
+    const interval = window.setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      });
+    }, 250);
+  };
+
+  // Function to generate a quiz
+  const generateQuiz = () => {
+    // Simulate quiz generation process
+    // In a real application, this would involve calling an API
+    setCurrentQuiz(dummyQuiz);
+    setQuizGenerated(true);
+  }
+
+  // Function to start the quiz
+  const startQuiz = () => {
+    setUserAnswers(Array(currentQuiz.length).fill(null));
+    setQuizActive(true);
+    setShowResults(false);
+    setQuizSubmitted(false);
+  }
+
+  // Function to handle answer selection
+  const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
+    if (quizSubmitted) return;
+    
+    const newAnswers = [...userAnswers];
+    newAnswers[questionIndex] = optionIndex;
+    setUserAnswers(newAnswers);
+  }
+
+  // Function to submit quiz
+  const submitQuiz = () => {
+    setShowResults(true);
+    setQuizSubmitted(true);
+    
+    // Calculate score using the raw calculation function
+    const score = calculateRawScore();
+    
+    // Check if perfect score and trigger confetti
+    if (score === currentQuiz.length) {
+      // Try to fire confetti with a slight delay to ensure DOM is ready
+      setTimeout(() => {
+        try {
+          triggerConfettiFireworks();
+        } catch (error) {
+          console.error("Error firing confetti:", error);
+        }
+      }, 300);
+    }
+  }
+
+  // Helper function to calculate score without relying on quizSubmitted state
+  const calculateRawScore = () => {
+    return userAnswers.reduce((score, answer, index) => {
+      // Skip null answers (unanswered questions)
+      if (answer === null) return score;
+      
+      const correctAnswer = currentQuiz[index].correctAnswer;
+      
+      // Handle both number and string comparisons
+      if (typeof answer === 'number' && typeof correctAnswer === 'number') {
+        return answer === correctAnswer ? score + 1 : score;
+      }
+      
+      // Convert to strings for consistent comparison if types don't match
+      return String(answer) === String(correctAnswer) ? score + 1 : score;
+    }, 0 as number);
+  };
+
+  // Function to calculate score (for display purposes)
+  const calculateScore = () => {
+    if (!quizSubmitted) return 0;
+    return calculateRawScore();
+  };
+
+  // Function to restart quiz
+  const restartQuiz = () => {
+    startQuiz();
+  }
+
+  // Function to get answer status class
+  const getAnswerClass = (questionIndex: number, optionIndex: number) => {
+    if (!showResults) return "";
+    
+    const isCorrect = currentQuiz[questionIndex].correctAnswer === optionIndex;
+    const isSelected = userAnswers[questionIndex] === optionIndex;
+    
+    if (isSelected && isCorrect) return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-500";
+    if (isSelected && !isCorrect) return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-500";
+    if (!isSelected && isCorrect) return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-500";
+    
+    return "";
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -79,6 +222,166 @@ export default function PiperChat() {
     return <FileText className="h-4 w-4 text-gray-500" />
   }
 
+  // Function to download quiz as PDF
+  const downloadQuizAsPdf = () => {
+    setIsDownloading(true);
+    
+    try {
+      // Create a new jsPDF instance
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(0, 0, 128);
+      doc.text("Machine Learning Quiz", pageWidth / 2, 20, { align: "center" });
+      
+      // Add score if quiz is submitted
+      if (quizSubmitted) {
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 0);
+        doc.text(
+          `Score: ${calculateScore()} out of ${currentQuiz.length}`,
+          pageWidth / 2,
+          30,
+          { align: "center" }
+        );
+      }
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Generated on: ${new Date().toLocaleDateString()}`,
+        pageWidth / 2,
+        38,
+        { align: "center" }
+      );
+      
+      doc.line(20, 42, pageWidth - 20, 42);
+      
+      let yPos = 50;
+      
+      // Loop through each question
+      currentQuiz.forEach((question, qIndex) => {
+        // Check if we need a new page
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        // Add question number and type
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(
+          `Question ${qIndex + 1} of ${currentQuiz.length} ${
+            question.type === "mcq" ? "(Multiple Choice)" : "(True/False)"
+          }`,
+          20,
+          yPos
+        );
+        yPos += 8;
+        
+        // Add question text
+        doc.setFontSize(11);
+        doc.text(question.question, 20, yPos, {
+          maxWidth: pageWidth - 40,
+        });
+        
+        // Calculate text height - rough estimate
+        const textLines = doc.splitTextToSize(question.question, pageWidth - 40);
+        yPos += textLines.length * 6 + 5;
+        
+        // Add options
+        question.options.forEach((option, oIndex) => {
+          // Check if we need a new page
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          // Determine if this option is correct or selected
+          const isCorrect = oIndex === question.correctAnswer;
+          const isSelected = userAnswers[qIndex] === oIndex;
+          
+          // Set color based on correctness and selection
+          if (quizSubmitted) {
+            if (isSelected && isCorrect) {
+              doc.setTextColor(0, 128, 0); // Green for correct selection
+            } else if (isSelected && !isCorrect) {
+              doc.setTextColor(255, 0, 0); // Red for incorrect selection
+            } else if (isCorrect) {
+              doc.setTextColor(0, 128, 0); // Green for correct answer
+            } else {
+              doc.setTextColor(0, 0, 0); // Black for other options
+            }
+          } else {
+            doc.setTextColor(0, 0, 0); // Black for all options if quiz not submitted
+          }
+          
+          // Add option text
+          doc.text(`${String.fromCharCode(65 + oIndex)}. ${option}`, 25, yPos);
+          
+          // Add marker for correct/selected answer
+          if (quizSubmitted) {
+            if (isCorrect) {
+              doc.text("✓", 15, yPos);
+            }
+            if (isSelected && !isCorrect) {
+              doc.text("✗", 15, yPos);
+            }
+          }
+          
+          yPos += 7;
+        });
+        
+        // Add explanation if quiz is submitted
+        if (quizSubmitted && question.explanation) {
+          // Check if we need a new page
+          if (yPos > 250) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          yPos += 3;
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text("Explanation:", 20, yPos);
+          yPos += 5;
+          
+          // Add explanation text
+          doc.setFontSize(10);
+          doc.text(question.explanation, 25, yPos, {
+            maxWidth: pageWidth - 45,
+          });
+          
+          // Calculate text height
+          const explanationLines = doc.splitTextToSize(
+            question.explanation,
+            pageWidth - 45
+          );
+          yPos += explanationLines.length * 5 + 10;
+        } else {
+          yPos += 15;
+        }
+        
+        // Add a divider between questions
+        if (qIndex < currentQuiz.length - 1) {
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPos - 5, pageWidth - 20, yPos - 5);
+        }
+      });
+      
+      // Save the PDF
+      doc.save("machine-learning-quiz.pdf");
+      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("There was a problem generating your PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh]">
@@ -234,9 +537,9 @@ export default function PiperChat() {
         {/* Chat tab content */}
         {activeTab === "chat" && (
           <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
-              {/* AI message */}
-              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[90%] sm:max-w-[80%]">
+            <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+              {/* AI message */} 
+              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground">P</div>
                 </div>
@@ -249,8 +552,8 @@ export default function PiperChat() {
               </div>
 
               {/* User message */}
-              <div className="flex items-start justify-end space-x-2 sm:space-x-3 max-w-[90%] sm:max-w-[80%] ml-auto">
-                <div className="bg-primary text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm">
+              <div className="flex items-start justify-end space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%] ml-auto">
+                <div className="bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue font-medium text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm">
                   <p className="text-xs sm:text-sm">Can you explain the difference between CNN and RNN models in simple terms?</p>
                 </div>
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
@@ -259,42 +562,23 @@ export default function PiperChat() {
               </div>
 
               {/* AI response */}
-              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[90%] sm:max-w-[80%]">
+              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground">P</div>
                 </div>
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                    <p className="text-xs sm:text-sm">
-                      <strong>CNNs (Convolutional Neural Networks)</strong> are like image specialists. They scan images
-                      piece by piece to detect patterns like edges, textures, and shapes. Think of them as art critics
-                      analyzing paintings by looking at small sections at a time. They're great for image
-                      classification, object detection, and similar visual tasks.
-                    </p>
-                  </div>
-
-                  <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                    <p className="text-xs sm:text-sm">
-                      <strong>RNNs (Recurrent Neural Networks)</strong> are more like language experts that remember
-                      what they've seen before. They're designed to work with sequences where each element relates to
-                      what came before it. Imagine reading a book and understanding each page in the context of previous
-                      pages. They excel in text generation, translation, and time-series prediction.
-                    </p>
-                  </div>
-
-                  <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                    <p className="text-xs sm:text-sm">
-                      <strong>Key Difference:</strong> CNNs focus on spatial patterns (in images) while RNNs handle
-                      sequential patterns (like text or time series) where memory of previous inputs matters.
-                    </p>
-                  </div>
+                <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
+                  <p className="text-xs sm:text-sm">
+                    CNNs (Convolutional Neural Networks) are specialized for grid-like data such as images. They use filters to detect patterns like edges and textures, making them excellent for image recognition tasks.
+                    <br /><br />
+                    RNNs (Recurrent Neural Networks) are designed for sequential data like text or time series. They have a "memory" that allows them to consider previous inputs when processing the current input, making them good for language processing or speech recognition.
+                  </p>
                 </div>
               </div>
             </div>
-
+            
             {/* Chat input */}
             <div className="border-t p-2 sm:p-4">
-              <div className="flex items-center bg-accent rounded-lg px-3 sm:px-4 py-1 sm:py-2">
+              <div className="max-w-[85%] sm:max-w-[75%] mx-auto flex items-center bg-accent rounded-lg px-3 sm:px-4 py-1 sm:py-2">
                 <input
                   type="text"
                   placeholder="Ask a question about your documents..."
@@ -312,106 +596,224 @@ export default function PiperChat() {
         {activeTab === "quiz" && (
           <div className="p-3 sm:p-6 h-full overflow-y-auto">
             <div className="max-w-full sm:max-w-lg mx-auto pb-4 space-y-4 sm:space-y-6">
-              <div className="bg-card border rounded-lg p-3 sm:p-5">
-                <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Generate Quiz</h3>
+              {!quizActive ? (
+                // Quiz generator panel
+                <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+                  <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Generate Quiz</h3>
 
-                <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Select Document</label>
-                    <div className="relative">
-                      <select className="block w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-base border rounded-md bg-background">
-                        <option>Machine Learning Guide.pdf</option>
-                        <option>Data Science Concepts.pdf</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                        <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                        Select Documents
+                      </label>
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <input type="checkbox" id="doc1" className="mr-2" />
+                          <label htmlFor="doc1" className="text-xs sm:text-sm">Machine Learning Guide.pdf</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id="doc2" className="mr-2" />
+                          <label htmlFor="doc2" className="text-xs sm:text-sm">Data Science Concepts.pdf</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id="doc3" className="mr-2" />
+                          <label htmlFor="doc3" className="text-xs sm:text-sm">Deep Learning Basics.pdf</label>
+                        </div>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Number of Questions</label>
+                      <input
+                        type="number"
+                        className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
+                        defaultValue="10"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Beginner</button>
+                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-primary text-xs sm:text-sm font-medium text-primary-foreground">
+                          Intermediate
+                        </button>
+                        <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Advanced</button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Question Types</label>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="flex items-center">
+                          <input type="checkbox" className="mr-1.5" defaultChecked />
+                          <span className="text-xs sm:text-sm">Multiple Choice</span>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" className="mr-1.5" defaultChecked />
+                          <span className="text-xs sm:text-sm">True/False</span>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" className="mr-1.5" />
+                          <span className="text-xs sm:text-sm">Short Answer</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Custom Prompt (Optional)</label>
+                      <input
+                        type="text"
+                        className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
+                        placeholder="e.g., Focus on neural networks and deep learning"
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Number of Questions</label>
-                    <input
-                      type="number"
-                      className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
-                      defaultValue="10"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
-                    <div className="flex flex-wrap gap-2">
-                      <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Beginner</button>
-                      <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-primary text-xs sm:text-sm font-medium text-primary-foreground">
-                        Intermediate
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={generateQuiz}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
+                    >
+                      Generate Quiz
+                    </button>
+                    {quizGenerated && (
+                      <button 
+                        onClick={startQuiz} 
+                        className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      >
+                        Attend Quiz
                       </button>
-                      <button className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-accent text-xs sm:text-sm font-medium">Advanced</button>
+                    )}
+                  </div>
+                  
+                  {quizGenerated && (
+                    <div className="mt-3 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded flex items-center">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Quiz successfully generated! You can attend it now.
                     </div>
+                  )}
+                </div>
+              ) : (
+                // Quiz taking interface
+                <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base sm:text-lg font-medium">Machine Learning Quiz</h3>
+                    {quizSubmitted && (
+                      <div className="bg-accent rounded-md px-2 py-1 text-xs sm:text-sm font-medium">
+                        Score: {calculateScore()}/{currentQuiz.length}
+                      </div>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Question Types</label>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex items-center">
-                        <input type="checkbox" className="mr-1.5" defaultChecked />
-                        <span className="text-xs sm:text-sm">Multiple Choice</span>
-                      </div>
-                      <div className="flex items-center">
-                        <input type="checkbox" className="mr-1.5" defaultChecked />
-                        <span className="text-xs sm:text-sm">True/False</span>
-                      </div>
-                      <div className="flex items-center">
-                        <input type="checkbox" className="mr-1.5" />
-                        <span className="text-xs sm:text-sm">Short Answer</span>
-                      </div>
+                  {showResults && (
+                    <div className={`mb-4 p-3 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
+                      {calculateScore() === currentQuiz.length ? (
+                        <div className="flex items-center">
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          <span>Perfect score! You got all {calculateScore()} questions correct.</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          <span>You got {calculateScore()} out of {currentQuiz.length} questions correct.</span>
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  <div className="space-y-6">
+                    {currentQuiz.map((question, qIndex) => (
+                      <div key={question.id} className="border-b pb-4 last:border-b-0">
+                        <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+                          Question {qIndex + 1} of {currentQuiz.length}
+                          {question.type === "mcq" ? " (Multiple Choice)" : " (True/False)"}
+                        </p>
+                        <p className="text-xs sm:text-sm mb-3 sm:mb-4">
+                          {question.question}
+                        </p>
+
+                        <div className="space-y-1.5 sm:space-y-2">
+                          {question.options.map((option, oIndex) => (
+                            <div 
+                              key={oIndex}
+                              className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${getAnswerClass(qIndex, oIndex)}`}
+                              onClick={() => handleAnswerSelect(qIndex, oIndex)}
+                            >
+                              <input 
+                                type="radio" 
+                                id={`q${qIndex}-${oIndex}`} 
+                                name={`q${qIndex}`}
+                                checked={userAnswers[qIndex] === oIndex}
+                                onChange={() => {}} // Controlled component
+                                disabled={quizSubmitted}
+                              />
+                              <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1">
+                                {option}
+                              </label>
+                              {showResults && userAnswers[qIndex] === oIndex && userAnswers[qIndex] !== question.correctAnswer && (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              {showResults && oIndex === question.correctAnswer && (
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {showResults && (
+                          <div className="mt-2 text-xs bg-accent/50 p-2 rounded">
+                            <p className="font-medium">Explanation:</p>
+                            <p>{question.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {!quizSubmitted ? (
+                      <button 
+                        onClick={submitQuiz} 
+                        className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
+                      >
+                        Submit Quiz
+                      </button>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={restartQuiz}
+                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-accent hover:bg-accent/90 transition-colors"
+                        >
+                          Retry Quiz
+                        </button>
+                        <button 
+                          onClick={() => setQuizActive(false)}
+                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
+                        >
+                          Back to Generator
+                        </button>
+                        <button 
+                          onClick={downloadQuizAsPdf}
+                          disabled={isDownloading}
+                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <span className="animate-pulse mr-1">Generating PDF...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-3 w-3 mr-1" />
+                              Download Quiz
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-
-                <button className="w-full inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary/90 transition-colors">
-                  Generate Quiz
-                </button>
-              </div>
-
-              <div className="bg-card border rounded-lg p-3 sm:p-5">
-                <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Quiz Preview</h3>
-
-                <div className="space-y-4 sm:space-y-6">
-                  <div>
-                    <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Question 1 of 10</p>
-                    <p className="text-xs sm:text-sm mb-3 sm:mb-4">
-                      Which of the following is NOT a common activation function used in neural networks?
-                    </p>
-
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input type="radio" id="q1-a" name="q1" />
-                        <label htmlFor="q1-a" className="text-xs sm:text-sm">
-                          ReLU (Rectified Linear Unit)
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="radio" id="q1-b" name="q1" />
-                        <label htmlFor="q1-b" className="text-xs sm:text-sm">
-                          Sigmoid
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="radio" id="q1-c" name="q1" />
-                        <label htmlFor="q1-c" className="text-xs sm:text-sm">
-                          Quantum Activation Function
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="radio" id="q1-d" name="q1" />
-                        <label htmlFor="q1-d" className="text-xs sm:text-sm">
-                          Tanh
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}

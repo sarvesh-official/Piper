@@ -1,0 +1,598 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 4213
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 20 Tf
+23. TL
+0. 0. 0.502 rg
+195.5399999999999636 785.1970866141732586 Td
+(Machine Learning Quiz) Tj
+ET
+BT
+/F1 14 Tf
+16.0999999999999979 TL
+0. 0.4 0. rg
+246.539999999999992 756.8506299212598378 Td
+(Score: 3 out of 5) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+242.4399999999999409 734.1734645669291695 Td
+(Generated on: 3/10/2025) Tj
+ET
+56.6929133858267775 722.8348818897637784 m
+538.5870866141731312 722.8348818897637784 l
+S
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0. g
+56.6929133858267775 700.15771653543311 Td
+(Question 1 of 5 \(Multiple Choice\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+56.6929133858267775 677.480551181102328 Td
+(Which of the following is NOT a common activation function used in neural networks?) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 646.2994488188976447 Td
+(A. ReLU \(Rectified Linear Unit\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 626.4569291338582389 Td
+(B. Sigmoid) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+70.8661417322834666 606.614409448818833 Td
+(C. Quantum Activation Function) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+42.5196850393700814 606.614409448818833 Td
+(') Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 586.7718897637794271 Td
+(D. Tanh) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+56.6929133858267775 558.42543307086612 Td
+(Explanation:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+70.8661417322834666 544.2522047244094665 Td
+(Quantum Activation Function is not an actual activation function used in neural networks. The common) Tj
+T* (ones are ReLU, Sigmoid, Tanh, Leaky ReLU, and others.) Tj
+ET
+0.78 G
+56.6929133858267775 501.7325196850393354 m
+538.5870866141731312 501.7325196850393354 l
+S
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0. g
+56.6929133858267775 487.559291338582625 Td
+(Question 2 of 5 \(True/False\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+56.6929133858267775 464.8821259842518998 Td
+(Convolutional Neural Networks \(CNNs\) are primarily used for processing sequential data like text.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 433.7010236220471597 Td
+(A. True) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+70.8661417322834666 413.8585039370078107 Td
+(B. False) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+42.5196850393700814 413.8585039370078107 Td
+(') Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+56.6929133858267775 385.5120472440944468 Td
+(Explanation:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+70.8661417322834666 371.3388188976377364 Td
+(False. CNNs are primarily used for processing grid-like data such as images. For sequential data like text,) Tj
+T* (RNNs or Transformers are more commonly used.) Tj
+ET
+0.78 G
+56.6929133858267775 328.8191338582676622 m
+538.5870866141731312 328.8191338582676622 l
+S
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0. g
+56.6929133858267775 314.6459055118109518 Td
+(Question 3 of 5 \(Multiple Choice\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+56.6929133858267775 291.9687401574802834 Td
+(Which of these is a technique to prevent overfitting in neural networks?) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 260.7876377952754865 Td
+(A. Increasing model complexity) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+70.8661417322834666 240.9451181102361943 Td
+(B. Dropout) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+42.5196850393700814 240.9451181102361943 Td
+(') Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+1. 0. 0. rg
+70.8661417322834666 221.1025984251967884 Td
+(C. Using smaller training datasets) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+1. 0. 0. rg
+42.5196850393700814 221.1025984251967884 Td
+(') Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 201.2600787401573825 Td
+(D. Removing all hidden layers) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+56.6929133858267775 172.9136220472439618 Td
+(Explanation:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+70.8661417322834666 158.7403937007873083 Td
+(Dropout is a regularization technique that prevents overfitting by randomly deactivating neurons during) Tj
+T* (training.) Tj
+ET
+0.78 G
+56.6929133858267775 116.2207086614172198 m
+538.5870866141731312 116.2207086614172198 l
+S
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 2429
+>>
+stream
+0.5670000000000001 w
+0.78 G
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0. g
+56.6929133858267775 785.1970866141732586 Td
+(Question 4 of 5 \(Multiple Choice\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+56.6929133858267775 762.5199212598424765 Td
+(What is the purpose of the softmax function in neural networks?) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 731.3388188976377933 Td
+(A. To introduce non-linearity) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+1. 0. 0. rg
+70.8661417322834666 711.4962992125983874 Td
+(B. To normalize input data) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+1. 0. 0. rg
+42.5196850393700814 711.4962992125983874 Td
+(') Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+70.8661417322834666 691.6537795275589815 Td
+(C. To convert outputs to probabilities that sum to 1) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+42.5196850393700814 691.6537795275589815 Td
+(') Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 671.8112598425196893 Td
+(D. To speed up training) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+56.6929133858267775 643.4648031496062686 Td
+(Explanation:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+70.8661417322834666 629.291574803149615 Td
+(The softmax function is used to convert the network's output into a probability distribution, ensuring all) Tj
+T* (values are between 0 and 1 and sum to 1.) Tj
+ET
+0.78 G
+56.6929133858267775 586.7718897637794271 m
+538.5870866141731312 586.7718897637794271 l
+S
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0. g
+56.6929133858267775 572.5986614173227736 Td
+(Question 5 of 5 \(True/False\)) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+56.6929133858267775 549.9214960629921052 Td
+(A higher learning rate always leads to better model performance.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. g
+70.8661417322834666 518.7403937007873083 Td
+(A. True) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+70.8661417322834666 498.8978740157479592 Td
+(B. False) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0. 0.502 0. rg
+42.5196850393700814 498.8978740157479592 Td
+(') Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+56.6929133858267775 470.5514173228345953 Td
+(Explanation:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.392 g
+70.8661417322834666 456.378188976377885 Td
+(False. A higher learning rate may cause the model to converge too quickly to a suboptimal solution or) Tj
+T* (even diverge. The optimal learning rate depends on the specific problem.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 3.0.0)
+/CreationDate (D:20250310133250+05'30')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000007035 00000 n 
+0000008860 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000004417 00000 n 
+0000004554 00000 n 
+0000007098 00000 n 
+0000007223 00000 n 
+0000007353 00000 n 
+0000007486 00000 n 
+0000007624 00000 n 
+0000007748 00000 n 
+0000007877 00000 n 
+0000008009 00000 n 
+0000008145 00000 n 
+0000008273 00000 n 
+0000008400 00000 n 
+0000008529 00000 n 
+0000008662 00000 n 
+0000008764 00000 n 
+0000009110 00000 n 
+0000009196 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <B8A09E794DC079B0DED4CC2A24E47E62> <B8A09E794DC079B0DED4CC2A24E47E62> ]
+>>
+startxref
+9300
+%%EOF
