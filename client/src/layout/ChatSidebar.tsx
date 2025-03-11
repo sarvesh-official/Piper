@@ -4,20 +4,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "@clerk/nextjs";
 import {
   LayoutGrid,
-  BookOpen,
   FileText,
   MessageCircle,
-  GraduationCap,
   UserCircle,
   Settings,
   LogOut,
   MoreHorizontal,
   ChevronDown,
   Clock,
-  PlusCircle
+  PlusCircle,
+  Loader2
 } from "lucide-react";
+import { fetchChatHistory } from "@/app/api/chat-api/api";
 
 const renderIcon = (icon: React.ReactNode) => {
   if (React.isValidElement(icon)) {
@@ -33,57 +34,15 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-// Dummy chat history data
-const chatHistory = [
-  {
-    id: 1,
-    title: "Research on AI trends",
-    timestamp: "2023-11-10T14:30:00",
-    preview: "What are the latest trends in artificial intelligence?"
-  },
-  {
-    id: 2,
-    title: "Marketing strategy document",
-    timestamp: "2023-11-09T09:15:00",
-    preview: "Help me analyze this marketing strategy document"
-  },
-  {
-    id: 3,
-    title: "Financial report Q3",
-    timestamp: "2023-11-07T16:45:00",
-    preview: "Can you summarize the key points in this financial report?"
-  },
-  {
-    id: 4,
-    title: "Project proposal review",
-    timestamp: "2023-11-05T11:20:00",
-    preview: "Review this project proposal and provide feedback"
-  },
-  {
-    id: 1,
-    title: "Research on AI trends",
-    timestamp: "2023-11-10T14:30:00",
-    preview: "What are the latest trends in artificial intelligence?"
-  },
-  {
-    id: 2,
-    title: "Marketing strategy document",
-    timestamp: "2023-11-09T09:15:00",
-    preview: "Help me analyze this marketing strategy document"
-  },
-  {
-    id: 3,
-    title: "Financial report Q3",
-    timestamp: "2023-11-07T16:45:00",
-    preview: "Can you summarize the key points in this financial report?"
-  },
-  {
-    id: 4,
-    title: "Project proposal review",
-    timestamp: "2023-11-05T11:20:00",
-    preview: "Review this project proposal and provide feedback"
-  }
-];
+// Updated Chat History interface to match backend response
+type ChatHistoryItem = {
+  id: string;
+  chatId: string;
+  chatName: string;
+  title: string;
+  timestamp: string;
+  preview: string;
+};
 
 // Simplified main nav - just Dashboard and My Documents
 const navItems: NavItem[] = [
@@ -123,6 +82,37 @@ const othersItems: NavItem[] = [
 const ChatSideBar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { getToken } = useAuth();
+
+
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!getToken) return;
+      
+      setIsLoadingChats(true);
+      setChatError(null);
+      
+      try {
+        const token = await getToken();
+        if (token) {
+          const history = await fetchChatHistory(token);
+          setChatHistory(history);
+        }
+      } catch (error) {
+        console.error("Error loading chat history:", error);
+        setChatError("Failed to load chat history");
+      } finally {
+        setIsLoadingChats(false);
+      }
+    };
+    
+    loadChatHistory();
+  }, [getToken, pathname]);
+
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -335,12 +325,33 @@ const ChatSideBar: React.FC = () => {
           )}
         </Link>
       </div>
+      
+      {isLoadingChats && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      
+      {chatError && (
+        <div className="text-xs text-red-500 px-3 py-2">
+          {chatError}
+        </div>
+      )}
+      
+      {!isLoadingChats && chatHistory.length === 0 && (
+        <div className="text-xs text-muted-foreground px-3 py-2">
+          No chat history found
+        </div>
+      )}
+      
       <ul className="flex flex-col gap-2">
         {chatHistory.map((chat) => (
           <li key={chat.id}>
             <Link
-              href={`/piper/chat/${chat.id}`}
-              className="menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group hover:bg-gray-50 hover:text-piper-blue dark:text-gray-300 hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12]"
+              href={`/piper/chat/${chat.chatId}`}
+              className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group hover:bg-gray-50 hover:text-piper-blue dark:text-gray-300 hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] ${
+                pathname === `/piper/chat/${chat.id}` ? "bg-gray-100 dark:bg-gray-800" : ""
+              }`}
             >
               <span className="text-gray-500">
                 <MessageCircle size={18} />

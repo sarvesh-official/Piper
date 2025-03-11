@@ -1,13 +1,17 @@
 "use client"
 import { useState, useRef } from "react"
 import { jsPDF } from "jspdf"
-import "jspdf-autotable" // Optional, for better table formatting
+import "jspdf-autotable"
 import confetti from "canvas-confetti"
 import {dummyQuiz} from "@/data/quiz"
 
-import { Upload, MessageCircle, CheckSquare, FileText, Send, User, X, FileImage, FileCode, FileSpreadsheet, ScrollText, AlertTriangle, CheckCircle2, XCircle, Download } from "lucide-react"
+import { Upload, MessageCircle, CheckSquare, FileText, Send, User, X, FileImage, FileCode, FileSpreadsheet, ScrollText, AlertTriangle, CheckCircle2, XCircle, Download, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAuth } from "@clerk/nextjs"
+import { createChat } from "@/app/api/chat-api/api"
+import { useRouter } from "next/navigation"
+import { uploadFilesToBackend } from "@/app/api/file-upload/api"
 
 // Quiz question type definition
 export type QuizQuestion = {
@@ -20,12 +24,22 @@ export type QuizQuestion = {
 }
 
 
+
 export default function PiperChat() {
   const [activeTab, setActiveTab] = useState<"upload" | "chat" | "quiz">("upload")
   const [files, setFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   
+  // Upload states
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [uploadedFiles, setUploadedFiles] = useState<{ fileName: string; fileUrl: string; fileKey: string }[]>([])
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
+
+
+  const router = useRouter()
   // Quiz states
   const [quizActive, setQuizActive] = useState(false)
   const [currentQuiz, setCurrentQuiz] = useState<QuizQuestion[]>([])
@@ -35,6 +49,8 @@ export default function PiperChat() {
   const [quizGenerated, setQuizGenerated] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [difficultyLevel, setDifficultyLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
+  
+  const { getToken, userId } = useAuth();
   
   // Function to trigger confetti fireworks
   const triggerConfettiFireworks = () => {
@@ -68,8 +84,7 @@ export default function PiperChat() {
 
   // Function to generate a quiz
   const generateQuiz = () => {
-    // Simulate quiz generation process
-    // In a real application, this would involve calling an API
+    
     setCurrentQuiz(dummyQuiz);
     setQuizGenerated(true);
   }
@@ -155,6 +170,47 @@ export default function PiperChat() {
     return "";
   }
 
+  const handleUploadFiles = async () => {
+    if (!files.length) return;
+  
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadProgress({});
+  
+    try {
+      const token = await getToken();
+  
+      if (!userId || !token) {
+        throw new Error("Authentication required. Please sign in.");
+      }
+  
+      // Upload files and create chat in a single request
+      const response = await uploadFilesToBackend(
+        files,
+        userId,
+        token,
+        (fileName, percentage) => {
+          setUploadProgress((prev) => ({
+            ...prev,
+            [fileName]: percentage,
+          }));
+        }
+      );
+      console.log(response)
+      if (response) {
+        router.push(`/piper/chat/${response.chatId}`);
+      } else {
+        throw new Error("Failed to create chat");
+      }
+    } catch (error: any) {
+      console.error("Upload failed:", error);
+      setUploadError(error.message || "Upload failed. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files)
@@ -170,8 +226,35 @@ export default function PiperChat() {
       return
     }
 
-    const newFiles = selectedFiles.slice(0, 3 - files.length)
-    setFiles((prev) => [...prev, ...newFiles])
+    // Check for duplicate files
+    const duplicateFiles = selectedFiles.filter(newFile => 
+      files.some(existingFile => existingFile.name === newFile.name)
+    )
+
+    if (duplicateFiles.length > 0) {
+      setDuplicateError(
+        duplicateFiles.length === 1
+          ? `"${duplicateFiles[0].name}" has already been added.`
+          : `${duplicateFiles.length} files have already been added.`
+      )
+      
+      // Filter out duplicates
+      const uniqueFiles = selectedFiles.filter(newFile => 
+        !files.some(existingFile => existingFile.name === newFile.name)
+      )
+      
+      if (uniqueFiles.length === 0) return
+      
+      // Add only unique files
+      const newFiles = uniqueFiles.slice(0, 3 - files.length)
+      setFiles((prev) => [...prev, ...newFiles])
+    } else {
+      // Clear any previous duplicate error
+      setDuplicateError(null)
+      
+      const newFiles = selectedFiles.slice(0, 3 - files.length)
+      setFiles((prev) => [...prev, ...newFiles])
+    }
   }
 
   const removeFile = (index: number) => {
@@ -440,6 +523,7 @@ export default function PiperChat() {
               className={cn(
                 "w-full max-w-xs sm:max-w-md p-3 sm:p-6 border-2 bg-gray-50 border-dashed rounded-lg flex flex-col items-center cursor-pointer transition-colors duration-200 dark:bg-accent",
                 isDragging ? "border-piper-blue dark:border-piper-cyan" : "border-gray-600",
+                isUploading ? "opacity-50 pointer-events-none" : ""
               )}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -485,7 +569,7 @@ export default function PiperChat() {
             </div>
 
             <div className="w-full max-w-xs sm:max-w-md mt-3 sm:mt-6 pb-3 sm:pb-6 md:pb-0">
-            <h4 className="text-xs sm:text-sm font-normal mb-1 sm:mb-2">Uploaded Files</h4>
+            <h4 className="text-xs sm:text-sm font-normal mb-1 sm:mb-2">Selected Files</h4>
 
               <AnimatePresence>
                   <div className="space-y-2">
@@ -496,7 +580,7 @@ export default function PiperChat() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         transition={{ duration: 0.2 }}
-                         className="flex items-center justify-between p-2 sm:p-3 bg-accent rounded-lg"
+                         className="flex items-center justify-between p-2 sm:p-3 bg-accent rounded-lg relative overflow-hidden"
                       >
                         <div className="flex items-center overflow-hidden">
                         <div className="flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
@@ -506,22 +590,30 @@ export default function PiperChat() {
                         <span className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[180px]">{file.name}</span>
                         </div>
                         <div className="flex items-center flex-shrink-0">
-                          <span className="text-xs text-muted-foreground mr-1 sm:mr-2">{getFileSize(file.size)}</span>
+                          {isUploading && uploadProgress[file.name] !== undefined ? (
+                            <span className="text-xs text-muted-foreground mr-1 sm:mr-2">{uploadProgress[file.name]}%</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground mr-1 sm:mr-2">{getFileSize(file.size)}</span>
+                          )}
                           <button
                           onClick={(e) => {
                             e.stopPropagation()
                             removeFile(index)
                           }}
-                          className="p-1 rounded-sm hover:bg-red-200 dark:hover:bg-red-300 hover:text-red-500 transition-colors"
+                          disabled={isUploading}
+                          className="p-1 rounded-sm hover:bg-red-200 dark:hover:bg-red-300 hover:text-red-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                           aria-label="Remove file"
                           >
                             <X className="h-3 sm:h-4 w-3 sm:w-4" />
                           </button>
                         </div>
+                        {isUploading && uploadProgress[file.name] !== undefined && (
+                          <div className="absolute bottom-0 left-0 h-1 bg-piper-blue dark:bg-piper-cyan" style={{ width: `${uploadProgress[file.name]}%` }}></div>
+                        )}
                       </motion.div>
                     ))}
                   </div>
-            
+
                   {files.length === 0 && (
                      <div className="flex items-center">
                      <span className="text-xs text-muted-foreground mr-2">No Files Uploaded Yet</span>
@@ -529,10 +621,33 @@ export default function PiperChat() {
                   )}
               </AnimatePresence>
 
+              {uploadError && (
+                <div className="mt-3 p-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded flex items-center">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  {uploadError}
+                </div>
+              )}
+
+              {duplicateError && (
+                <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded flex items-center">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  {duplicateError}
+                </div>
+              )}
+
               {files.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 sm:mt-4">
-                  <button className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan dark:hover:bg-piper-cyan/90 hover:bg-piper-blue/90 transition-colors">
-                    Process Files
+                  <button 
+                    onClick={handleUploadFiles}
+                    disabled={isUploading}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan dark:hover:bg-piper-cyan/90 hover:bg-piper-blue/90 transition-colors disabled:opacity-70"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : 'Process Files'}
                   </button>
                 </motion.div>
               )}
