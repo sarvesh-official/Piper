@@ -17,6 +17,7 @@ const s3Service_1 = require("../services/s3Service");
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const pdf_parse_1 = __importDefault(require("pdf-parse"));
 const mammoth_1 = __importDefault(require("mammoth"));
+const tesseract_js_1 = __importDefault(require("tesseract.js"));
 const uploadFilesAndExtractText = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.body;
@@ -64,32 +65,59 @@ const uploadFilesAndExtractText = (req, res) => __awaiter(void 0, void 0, void 0
 exports.uploadFilesAndExtractText = uploadFilesAndExtractText;
 // Function to extract text based on file type
 const extractTextFromFile = (fileBuffer, mimeType) => __awaiter(void 0, void 0, void 0, function* () {
-    if (mimeType === "application/pdf") {
-        const pdfData = yield (0, pdf_parse_1.default)(fileBuffer);
-        return pdfData.text;
+    try {
+        if (mimeType === "application/pdf") {
+            const pdfData = yield (0, pdf_parse_1.default)(fileBuffer);
+            return pdfData.text;
+        }
+        else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            const docxData = yield mammoth_1.default.extractRawText({ buffer: fileBuffer });
+            return docxData.value;
+        }
+        else if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
+            return yield extractTextFromPPTX(fileBuffer);
+        }
+        else if (mimeType === "text/csv") {
+            return yield extractTextFromCSV(fileBuffer);
+        }
+        else if (mimeType === "text/plain") {
+            return fileBuffer.toString("utf-8");
+        }
+        else if (mimeType.startsWith("image/")) {
+            return yield extractTextFromImage(fileBuffer);
+        }
+        else {
+            throw new Error("Unsupported file type");
+        }
     }
-    else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        const docxData = yield mammoth_1.default.extractRawText({ buffer: fileBuffer });
-        return docxData.value;
-    }
-    else if (mimeType === "text/csv") {
-        return yield extractTextFromCSV(fileBuffer);
-    }
-    else if (mimeType === "text/plain") {
-        return fileBuffer.toString("utf-8");
-    }
-    else {
-        throw new Error("Unsupported file type");
+    catch (error) {
+        console.error("Error extracting text:", error);
+        return "";
     }
 });
 // Function to extract text from CSV
 const extractTextFromCSV = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
-    return new Promise((resolve) => {
-        let textData = "";
-        const lines = fileBuffer.toString("utf-8").split("\n");
-        lines.forEach((line) => {
-            textData += line + "\n";
-        });
-        resolve(textData);
-    });
+    return fileBuffer.toString("utf-8"); // Simple conversion to text
+});
+// Function to extract text from PPTX
+const extractTextFromPPTX = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const pptData = yield mammoth_1.default.extractRawText({ buffer: fileBuffer });
+        return pptData.value;
+    }
+    catch (error) {
+        console.error("Error extracting text from PPTX:", error);
+        return "";
+    }
+});
+// Function to extract text from images (OCR)
+const extractTextFromImage = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { data: { text } } = yield tesseract_js_1.default.recognize(fileBuffer, "eng");
+        return text;
+    }
+    catch (error) {
+        console.error("Error extracting text from image:", error);
+        return "";
+    }
 });
