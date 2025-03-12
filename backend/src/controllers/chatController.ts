@@ -146,9 +146,9 @@ export const deleteChat = async (req: Request, res: Response) => {
     
     try {
       // Delete files from S3
-      if (fileKeys.length > 0) {
-        await deleteFilesFromS3(fileKeys.filter((key): key is string => !!key));
-      }
+      // if (fileKeys.length > 0) {
+      //   await deleteFilesFromS3(fileKeys.filter((key): key is string => !!key));
+      // }
       
       // Delete embeddings from Pinecone
       await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));

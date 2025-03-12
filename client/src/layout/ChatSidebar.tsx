@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "@clerk/nextjs";
 import {
@@ -84,7 +84,8 @@ const ChatSideBar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const { getToken } = useAuth();
-
+  const {id} = useParams();
+  const router = useRouter();
 
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -115,6 +116,13 @@ const ChatSideBar: React.FC = () => {
     loadChatHistory();
   }, [getToken, pathname]);
 
+  const handleChatDeleted = (deletedChatId: string) => {
+    // Check if the deleted chat is the one currently being viewed
+    if (deletedChatId === id) {
+      // Redirect to the home page
+      router.push('/piper/chat');
+    }
+  };
   const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -128,6 +136,7 @@ const ChatSideBar: React.FC = () => {
           setChatHistory(prevHistory => 
             prevHistory.filter(chat => chat.chatId !== chatId)
           );
+          handleChatDeleted(chatId);
         }
       } catch (error) {
         console.error("Failed to delete chat:", error);
