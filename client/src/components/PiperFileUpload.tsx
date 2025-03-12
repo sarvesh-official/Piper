@@ -25,6 +25,9 @@ export default function PiperFileUpload() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
   
+  // File size limit in bytes (5 MB)
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  
   // Tooltip states
   const debugTooltips = false // Set to true to debug tooltips if needed
 
@@ -84,6 +87,25 @@ export default function PiperFileUpload() {
     if (files.length >= 3) {
       alert("Maximum 3 files can be uploaded")
       return
+    }
+
+    // Check for files exceeding size limit
+    const oversizedFiles = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      setUploadError(
+        oversizedFiles.length === 1
+          ? `"${oversizedFiles[0].name}" exceeds the 5 MB size limit.`
+          : `${oversizedFiles.length} files exceed the 5 MB size limit.`
+      );
+      
+      // Filter out oversized files
+      const validSizeFiles = selectedFiles.filter(file => file.size <= MAX_FILE_SIZE);
+      if (validSizeFiles.length === 0) return;
+      
+      selectedFiles = validSizeFiles;
+    } else {
+      // Clear any previous error related to file size
+      setUploadError(null);
     }
 
     // Check for duplicate files
@@ -293,6 +315,9 @@ export default function PiperFileUpload() {
               Drag and drop your files here, or click to browse
               {files.length > 0 && files.length < 3 && ` (${3 - files.length} more allowed)`}
               {files.length >= 3 && " (Maximum limit reached)"}
+            </p>
+            <p className="text-xs text-muted-foreground text-center mb-2">
+              Maximum file size: 5 MB per file
             </p>
             <div className="flex flex-wrap gap-2 sm:gap-4 mb-2 sm:mb-4 w-full justify-center">
               <div className="bg-accent dark:bg-gray-700 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium flex items-center">

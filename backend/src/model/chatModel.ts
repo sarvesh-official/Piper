@@ -1,6 +1,40 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid"; 
 
+// Define schema for quiz questions
+const quizQuestionSchema = new mongoose.Schema({
+  id: Number,
+  type: {
+    type: String,
+    enum: ['mcq', 'true_false'],
+    required: true
+  },
+  question: String,
+  options: [String],
+  correctAnswer: {
+    type: mongoose.Schema.Types.Mixed, // Can be Number or String
+    required: true
+  },
+  explanation: String
+});
+
+// Define quiz schema
+const quizSchema = new mongoose.Schema({
+  questions: [quizQuestionSchema],
+  generatedAt: { type: Date, default: Date.now },
+  settings: {
+    difficulty: {
+      type: String,
+      enum: ['beginner', 'intermediate', 'advanced']
+    },
+    questionTypes: {
+      mcq: Boolean,
+      trueFalse: Boolean
+    },
+    customPrompt: String
+  }
+});
+
 const chatSchema = new mongoose.Schema({
   chatId: { type: String, unique: true, default: uuidv4 },
   chatName: { type: String, required: true },
@@ -18,12 +52,14 @@ const chatSchema = new mongoose.Schema({
       fileName: String,
       fileUrl: String,
       fileType: String,
-      fileKey: String, // Added fileKey field that's used in the find operation
-      extractedText: String, // Added extractedText field for content retrieval
+      fileKey: String,
+      extractedText: String,
       embeddingId: String,
       uploadedAt: { type: Date, default: Date.now },
     },
   ],
+  // Add quiz field to store generated quizzes
+  quiz: quizSchema,
   createdAt: { type: Date, default: Date.now },
 });
 

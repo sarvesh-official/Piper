@@ -1,4 +1,4 @@
-import { Message } from "@/components/PiperChat";
+import { Message } from "@/types/chat";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 

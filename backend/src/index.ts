@@ -6,7 +6,7 @@ import { requireAuth } from "./middlewares/authMiddleware";
 import { connectToDatabase } from "./utils";
 import chatRoutes from "./routes/chatRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
-
+import quizRoutes from "./routes/quizRoutes";
 configDotenv();
 
 const app = express();
@@ -22,6 +22,7 @@ app.get("/dashboard", requireAuth, (req: Request, res: Response) => {
 
 app.use("/api/upload",requireAuth, uploadRoutes);
 app.use("/api/chat", requireAuth, chatRoutes);
+app.use("/api/quiz", requireAuth, quizRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Public API is working!" });

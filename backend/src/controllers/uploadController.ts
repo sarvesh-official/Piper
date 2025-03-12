@@ -1,10 +1,35 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { uploadFileToS3 } from "../services/s3Service";
 import Chat from "../model/chatModel";
 import { generateEmbeddings, storeInPinecone, updateFileWithEmbeddingId } from "../services/embeddingService";
 import { extractTextFromCSV, extractTextFromExcel, extractTextFromImage, extractTextFromPPTX } from "../utils/fileProcessor";
 import PdfParse from "pdf-parse";
 import mammoth from "mammoth";
+import multer from "multer";
+
+// Add a middleware to handle multer errors
+export const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    // A Multer error occurred when uploading
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ 
+        error: "File size exceeds the limit of 5 MB" 
+      });
+      return 
+    }
+    res.status(400).json({ 
+      error: `Upload error: ${err.message}` 
+    });
+    return 
+  } else if (err) {
+    // An unknown error occurred
+    res.status(500).json({ 
+      error: `Unknown error: ${err.message}` 
+    });
+    return 
+  }
+  next();
+};
 
 export const uploadFilesAndExtractText = async (
   req: Request,

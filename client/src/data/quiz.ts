@@ -1,4 +1,4 @@
-import { QuizQuestion } from "@/components/PiperChat";
+import { QuizQuestion } from "@/app/api/quiz/api";
 
 export const dummyQuiz: QuizQuestion[] = [
   {
