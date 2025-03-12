@@ -16,9 +16,10 @@ import {
   ChevronDown,
   Clock,
   PlusCircle,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
-import { fetchChatHistory } from "@/app/api/chat-api/api";
+import { fetchChatHistory, deleteChat } from "@/app/api/chat-api/api";
 
 const renderIcon = (icon: React.ReactNode) => {
   if (React.isValidElement(icon)) {
@@ -88,6 +89,7 @@ const ChatSideBar: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadChatHistory = async () => {
@@ -113,6 +115,28 @@ const ChatSideBar: React.FC = () => {
     loadChatHistory();
   }, [getToken, pathname]);
 
+  const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (confirm("Are you sure you want to delete this chat?")) {
+      try {
+        setDeletingChatId(chatId);
+        const token = await getToken();
+        if (token) {
+          await deleteChat(chatId, token);
+          setChatHistory(prevHistory => 
+            prevHistory.filter(chat => chat.chatId !== chatId)
+          );
+        }
+      } catch (error) {
+        console.error("Failed to delete chat:", error);
+        alert("Failed to delete chat. Please try again.");
+      } finally {
+        setDeletingChatId(null);
+      }
+    }
+  };
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -350,23 +374,37 @@ const ChatSideBar: React.FC = () => {
             <Link
               href={`/piper/chat/${chat.chatId}`}
               className={`menu-item text-gray-700 relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm group hover:bg-gray-50 hover:text-piper-blue dark:text-gray-300 hover:dark:text-piper-cyan hover:dark:bg-piper-darkblue/[0.12] ${
-                pathname === `/piper/chat/${chat.id}` ? "bg-gray-100 dark:bg-gray-800" : ""
+                pathname === `/piper/chat/${chat.chatId}` ? "bg-gray-100 dark:bg-gray-800" : ""
               }`}
             >
               <span className="text-gray-500">
                 <MessageCircle size={18} />
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <div className="flex-1 truncate">
-                  <p className="truncate">{chat.title}</p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {new Date(chat.timestamp).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'numeric',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
+                <>
+                  <div className="flex-1 truncate">
+                    <p className="truncate">{chat.title}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {new Date(chat.timestamp).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={(e) => handleDeleteChat(e, chat.chatId)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-opacity"
+                    title="Delete chat"
+                    disabled={deletingChatId === chat.chatId}
+                  >
+                    {deletingChatId === chat.chatId ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                </>
               )}
             </Link>
           </li>

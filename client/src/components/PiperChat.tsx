@@ -1,17 +1,18 @@
 "use client"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, FormEvent } from "react"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
 import confetti from "canvas-confetti"
+import { useRouter, useParams } from "next/navigation"
 import {dummyQuiz} from "@/data/quiz"
 
 import { Upload, MessageCircle, CheckSquare, FileText, Send, User, X, FileImage, FileCode, FileSpreadsheet, ScrollText, AlertTriangle, CheckCircle2, XCircle, Download, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@clerk/nextjs"
-import { createChat } from "@/app/api/chat-api/api"
-import { useRouter } from "next/navigation"
-import { uploadFilesToBackend } from "@/app/api/file-upload/api"
+import { createChat, fetchChatById, addMessageToChat, queryChatWithDocuments } from "@/app/api/chat-api/api"
+// Import Tooltip components
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 // Quiz question type definition
 export type QuizQuestion = {
@@ -23,23 +24,35 @@ export type QuizQuestion = {
   explanation?: string;
 }
 
-
+// Define Message type for chat
+export type Message = {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt?: string;
+};
 
 export default function PiperChat() {
+  const router = useRouter()
+  const { id } = useParams()
   const [activeTab, setActiveTab] = useState<"upload" | "chat" | "quiz">("upload")
   const [files, setFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
-  
-  // Upload states
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+
+  // Add tooltip state for upload button
+  const [showUploadTooltip, setShowUploadTooltip] = useState(false)
+
   const [uploadedFiles, setUploadedFiles] = useState<{ fileName: string; fileUrl: string; fileKey: string }[]>([])
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [duplicateError, setDuplicateError] = useState<string | null>(null)
-
-
-  const router = useRouter()
+  
+  // Chat states
+  const [chatLoaded, setChatLoaded] = useState(false)
+  const [chatData, setChatData] = useState<any>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [currentMessage, setCurrentMessage] = useState("")
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
   // Quiz states
   const [quizActive, setQuizActive] = useState(false)
   const [currentQuiz, setCurrentQuiz] = useState<QuizQuestion[]>([])
@@ -52,6 +65,187 @@ export default function PiperChat() {
   
   const { getToken, userId } = useAuth();
   
+  // Add this near your other state declarations
+  const [debugTooltips, setDebugTooltips] = useState(false)
+
+  // Add this new state variable to track if we've already attempted to load the chat
+  const [chatLoadAttempted, setChatLoadAttempted] = useState(false)
+
+  // Add this function to handle chat deletion
+  const handleChatDeleted = (deletedChatId: string) => {
+    // Check if the deleted chat is the one currently being viewed
+    if (deletedChatId === id) {
+      // Redirect to the home page
+      router.push('/piper');
+    }
+  };
+
+  // Loading existing chat data and setting uploaded files  
+  useEffect(() => {
+    const loadExistingChat = async () => {
+      // Only attempt to load if we haven't already tried and we have a valid ID
+      if (!chatLoadAttempted && id && id !== 'new') {
+        try {
+          setChatLoadAttempted(true); // Mark that we've attempted to load
+          const token = await getToken();
+          if (token) {
+            try {
+              const chat = await fetchChatById(id as string, token);
+              
+              // If the chat doesn't exist (was deleted), redirect to home
+              if (!chat) {
+                console.log("Chat not found or was deleted");
+                router.push('/piper');
+                return;
+              }
+              
+              setChatData(chat);
+              
+              if (chat.files && chat.files.length > 0) {
+                setUploadedFiles(chat.files);
+                setChatLoaded(true);
+                setActiveTab("chat");
+              }
+              
+              // Load chat messages if they exist
+              if (chat.messages && chat.messages.length > 0) {
+                setMessages(chat.messages);
+              } else {
+                // Set default welcome message if no messages exist
+                setMessages([{
+                  role: 'assistant',
+                  content: "I've processed your documents. What would you like to know about them?"
+                }]);
+              }
+            } catch (error) {
+              console.error("Chat not found:", error);
+              // Redirect to the main chat page if the specific chat wasn't found
+              router.push('/piper/chat');
+            }
+          }
+        } catch (error) {
+          console.error("Error loading chat:", error);
+        }
+      } else if (!chatLoadAttempted && id === 'new' && uploadedFiles.length > 0) {
+        // For new chat with already uploaded files, add welcome message
+        setChatLoadAttempted(true);
+        setMessages([{
+          role: 'assistant',
+          content: "I've processed your documents. What would you like to know about them?"
+        }]);
+      }
+    };
+    
+    loadExistingChat();
+  }, [id, getToken, chatLoadAttempted, router]); // Added router to dependencies
+
+  // Add an effect to periodically check if the chat still exists (optional, for better UX)
+  useEffect(() => {
+    // Only set up polling if we're viewing an existing chat
+    if (!id || id === 'new' || !chatLoaded) return;
+
+    const checkChatExists = async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          try {
+            await fetchChatById(id as string, token);
+            // Chat exists, do nothing
+          } catch (error) {
+            console.log("Chat no longer exists, redirecting...");
+            router.push('/piper/chat');
+          }
+        }
+      } catch (error) {
+        console.error("Error checking chat existence:", error);
+      }
+    };
+
+    // Check every 30 seconds if the chat still exists
+    // This is optional and can be removed if not needed
+    const intervalId = setInterval(checkChatExists, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [id, chatLoaded, getToken, router]);
+
+  // Scroll to bottom of messages when new messages are added
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Send message function
+  const sendMessage = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!currentMessage.trim() || isSendingMessage) return;
+    
+    try {
+      setIsSendingMessage(true);
+      
+      // Add user message to UI immediately
+      const userMessage: Message = {
+        role: 'user',
+        content: currentMessage.trim()
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+      setCurrentMessage('');
+      
+      const token = await getToken();
+      if (!token || !userId) {
+        throw new Error('Authentication required');
+      }
+      
+      // If we don't have a chat ID yet, create a new chat
+      let chatId = id as string;
+      if (!chatId || chatId === 'new') {
+        if (uploadedFiles.length === 0) {
+          throw new Error('Please upload files before starting the chat');
+        }
+        
+        const newChat = await createChat(userId, uploadedFiles, token);
+        chatId = newChat.id;
+        setChatData(newChat);
+        
+        // Navigate to the new chat URL
+        router.push(`/chat/${chatId}`);
+      }
+      
+      // Query the API with the user's message
+      const response = await queryChatWithDocuments(
+        userId,
+        chatId,
+        currentMessage.trim(),
+        token
+      );
+      
+      // Add the assistant's response to the UI
+      if (response && response.answer) {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: response.answer
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Show error in UI
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'assistant', 
+          content: 'Sorry, there was an error processing your request. Please try again.' 
+        }
+      ]);
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   // Function to trigger confetti fireworks
   const triggerConfettiFireworks = () => {
     const duration = 5 * 1000;
@@ -59,7 +253,7 @@ export default function PiperChat() {
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
 
     const randomInRange = (min: number, max: number) =>
-      Math.random() * (max - min) + min;
+      Math.random() * (max) + min;
 
     const interval = window.setInterval(() => {
       const timeLeft = animationEnd - Date.now();
@@ -170,141 +364,7 @@ export default function PiperChat() {
     return "";
   }
 
-  const handleUploadFiles = async () => {
-    if (!files.length) return;
-  
-    setIsUploading(true);
-    setUploadError(null);
-    setUploadProgress({});
-  
-    try {
-      const token = await getToken();
-  
-      if (!userId || !token) {
-        throw new Error("Authentication required. Please sign in.");
-      }
-  
-      // Upload files and create chat in a single request
-      const response = await uploadFilesToBackend(
-        files,
-        userId,
-        token,
-        (fileName, percentage) => {
-          setUploadProgress((prev) => ({
-            ...prev,
-            [fileName]: percentage,
-          }));
-        }
-      );
-      console.log(response)
-      if (response) {
-        router.push(`/piper/chat/${response.chatId}`);
-      } else {
-        throw new Error("Failed to create chat");
-      }
-    } catch (error: any) {
-      console.error("Upload failed:", error);
-      setUploadError(error.message || "Upload failed. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFiles = Array.from(e.target.files)
-      addFiles(selectedFiles)
-      // Reset the input value so the same file can be selected again
-      e.target.value = ""
-    }
-  }
-
-  const addFiles = (selectedFiles: File[]) => {
-    if (files.length >= 3) {
-      alert("Maximum 3 files can be uploaded")
-      return
-    }
-
-    // Check for duplicate files
-    const duplicateFiles = selectedFiles.filter(newFile => 
-      files.some(existingFile => existingFile.name === newFile.name)
-    )
-
-    if (duplicateFiles.length > 0) {
-      setDuplicateError(
-        duplicateFiles.length === 1
-          ? `"${duplicateFiles[0].name}" has already been added.`
-          : `${duplicateFiles.length} files have already been added.`
-      )
-      
-      // Filter out duplicates
-      const uniqueFiles = selectedFiles.filter(newFile => 
-        !files.some(existingFile => existingFile.name === newFile.name)
-      )
-      
-      if (uniqueFiles.length === 0) return
-      
-      // Add only unique files
-      const newFiles = uniqueFiles.slice(0, 3 - files.length)
-      setFiles((prev) => [...prev, ...newFiles])
-    } else {
-      // Clear any previous duplicate error
-      setDuplicateError(null)
-      
-      const newFiles = selectedFiles.slice(0, 3 - files.length)
-      setFiles((prev) => [...prev, ...newFiles])
-    }
-  }
-
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const droppedFiles = Array.from(e.dataTransfer.files)
-    addFiles(droppedFiles)
-  }
-
-  const handleBrowseClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const getFileSize = (size: number) => {
-    if (size < 1024) {
-      return `${size} B`
-    } else if (size < 1024 * 1024) {
-      return `${(size / 1024).toFixed(1)} KB`
-    } else {
-      return `${(size / (1024 * 1024)).toFixed(1)} MB`
-    }
-  }
-
-
-  const getFileIcon = (type: string) => {
-    if (type.includes("pdf")) return <FileText className="h-4 w-4 text-piper-darkblue dark:text-piper-lightblue"/>
-    if (type.includes("doc")) return <ScrollText className="h-4 w-4 text-piper-blue dark:text-piper-cyan" />
-    if (type.includes("csv") || type.includes("excel") || type.includes("sheet")) 
-      return <FileSpreadsheet className="h-4 w-4 text-green-500" />
-    if (type.includes("image") || type.includes("png") || type.includes("jpg") || type.includes("jpeg")) 
-      return <FileImage className="h-4 w-4 text-purple-600  dark:text-purple-500 " />
-    if (type.includes("code") || type.includes("json") || type.includes("xml") || type.includes("html")) 
-      return <FileCode className="h-4 w-4 text-yellow-500" />
-    return <FileText className="h-4 w-4 text-gray-500" />
-  }
 
   // Function to download quiz as PDF
   const downloadQuizAsPdf = () => {
@@ -361,10 +421,9 @@ export default function PiperChat() {
           `Question ${qIndex + 1} of ${currentQuiz.length} ${
             question.type === "mcq" ? "(Multiple Choice)" : "(True/False)"
           }`,
-          20,
+          20, 
           yPos
         );
-        yPos += 8;
         
         // Add question text
         doc.setFontSize(11);
@@ -472,495 +531,476 @@ export default function PiperChat() {
     setDifficultyLevel(level);
   };
 
+  // Function to handle upload button click when disabled
+  const handleUploadButtonClick = () => {
+    if (chatLoaded) {
+      console.log("Setting tooltip to visible");
+      setShowUploadTooltip(true);
+      // Hide tooltip after longer duration for debugging if needed
+      setTimeout(() => {
+        console.log("Hiding tooltip");
+        setShowUploadTooltip(false);
+      }, debugTooltips ? 15000 : 3000); // 15 seconds in debug mode, 3 seconds normal
+    } else {
+      setActiveTab("upload");
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh] max-w-5xl mx-auto">
-      {/* Tab navigation */}
-      <div
-        className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
-        }}
-      >
-        <button
-          className={cn(
-            "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
-            activeTab === "upload" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
-          )}
-          onClick={() => setActiveTab("upload")}
+    <>
+      {/* Debug toggle (only in development) - Remove for production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-2 right-2 z-[9999]">
+          <button 
+            onClick={() => setDebugTooltips(!debugTooltips)}
+            className="bg-black text-white p-1 text-xs rounded"
+          >
+            {debugTooltips ? "Debug Mode On" : "Debug Mode Off"}
+          </button>
+        </div>
+      )}
+      
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-in-out forwards;
+        }
+      `}</style>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh] max-w-5xl mx-auto">
+        {/* Tab navigation */}
+        <div
+          className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
+          }}
         >
-          <Upload className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-          <span className="whitespace-nowrap">Upload Documents</span>
-        </button>
-        <button
-          className={cn(
-            "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
-            activeTab === "chat" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
-          )}
-          onClick={() => setActiveTab("chat")}
-        >
-          <MessageCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-          <span className="whitespace-nowrap">Ask Questions</span>
-        </button>
-        <button
-          className={cn(
-            "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
-            activeTab === "quiz" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
-          )}
-          onClick={() => setActiveTab("quiz")}
-        >
-          <CheckSquare className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-          <span className="whitespace-nowrap">Generate Quiz</span>
-        </button>
-      </div>
+          <div className="relative">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip 
+                onOpenChange={(open) => {
+                  // Only close when transitioning from open to closed
+                  if (!open) setShowUploadTooltip(false);
+                }}
+              >
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(
+                      "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
+                      activeTab === "upload" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
+                      chatLoaded && "opacity-60 cursor-not-allowed"
+                    )}
+                    onClick={handleUploadButtonClick}
+                    disabled={chatLoaded}
+                  >
+                    <Upload className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+                    <span className="whitespace-nowrap">Upload Documents</span>
+                  </button>
+                </TooltipTrigger>
+                {/* Only render tooltip content when there are already files loaded */}
+                {chatLoaded && (
+                  <TooltipContent 
+                    side="bottom" 
+                    align="start" 
+                    sideOffset={5} 
+                    className={`z-[1000] p-2 text-xs ${
+                      debugTooltips 
+                        ? "bg-red-500 text-white border-2 border-white" 
+                        : "bg-white dark:bg-gray-900 text-foreground border border-piper-blue dark:border-piper-cyan shadow-sm"
+                    }`}
+                  >
+                    Files are already uploaded. You can't upload again in this session.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
 
-      {/* App content */}
-      <div className="flex-1 overflow-auto">
-        {/* Upload tab content */}
-        {activeTab === "upload" && (
-          <div className="p-3 sm:p-6 h-full flex flex-col pt-6 items-center justify-center">
-            <div
-              className={cn(
-                "w-full max-w-xs sm:max-w-md p-3 sm:p-6 border-2 bg-gray-50 border-dashed rounded-lg flex flex-col items-center cursor-pointer transition-colors duration-200 dark:bg-accent",
-                isDragging ? "border-piper-blue dark:border-piper-cyan" : "border-gray-600",
-                isUploading ? "opacity-50 pointer-events-none" : ""
+            {/* Fallback tooltip for debugging purposes */}
+            {debugTooltips && chatLoaded && (
+              <div className="absolute top-full left-0 mt-2 p-2 bg-red-600 text-white text-sm rounded shadow-lg z-[9999] border-2 border-white">
+                FALLBACK TOOLTIP: Files are already uploaded. You can't upload again in this session.
+              </div>
+            )}
+          </div>
+          
+          <button
+            className={cn(
+              "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
+              activeTab === "chat" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
+            )}
+            onClick={() => setActiveTab("chat")}
+          >
+            <MessageCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+            <span className="whitespace-nowrap">Ask Questions</span>
+          </button>
+          <button
+            className={cn(
+              "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium flex items-center",
+              activeTab === "quiz" ? "text-piper-blue dark:text-piper-cyan border-b-2 border-piper-blue dark:border-piper-cyan" : "text-muted-foreground",
+            )}
+            onClick={() => setActiveTab("quiz")}
+          >
+            <CheckSquare className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+            <span className="whitespace-nowrap">Generate Quiz</span>
+          </button>
+        </div>
+
+        {/* App content */}
+        <div className="flex-1 overflow-auto">
+          {/* Upload tab content */}
+          
+
+          {/* Chat tab content - show uploaded files info when chat is loaded */}
+          {activeTab === "chat" && (
+            <div className="flex flex-col h-full">
+              {chatLoaded && uploadedFiles.length > 0 && (
+                <div className="bg-accent/50 p-2 flex items-center justify-between border-b">
+                  <div className="flex items-center text-xs">
+                    <FileText className="h-3 w-3 mr-1" />
+                    <span>
+                      {uploadedFiles.length} {uploadedFiles.length === 1 ? 'file' : 'files'} uploaded: 
+                      {uploadedFiles.map((file, index) => (
+                        <span key={file.fileKey} className="ml-1 font-medium">
+                          {file.fileName}{index < uploadedFiles.length - 1 ? ',' : ''}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
               )}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={handleBrowseClick}
-            >
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
+              
+              {/* Dynamic chat content */}
+              <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+                {messages.map((message, index) => (
+                  message.role === "assistant" ? (
+                    // AI message
+                    <div key={index} className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <div className="w-4 h-4 sm:w-5 h-5 text-primary-foreground">P</div>
+                      </div>
+                      <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
+                        <p className="text-xs sm:text-sm whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    // User message
+                    <div key={index} className="flex items-start justify-end space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%] ml-auto">
+                      <div className="bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue font-medium text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm">
+                        <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  )
+                ))}
 
-              <motion.div
-                initial={{ scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mb-2 sm:mb-4"
-              >                
-                <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
-              </motion.div>
-
-              <h3 className="text-base sm:text-lg font-medium mb-1 sm:mb-2 text-center">Upload your documents</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground text-center mb-2 sm:mb-4">
-                Drag and drop your files here, or click to browse
-                {files.length > 0 && files.length < 3 && ` (${3 - files.length} more allowed)`}
-                {files.length >= 3 && " (Maximum limit reached)"}
-              </p>
-              <div className="flex flex-wrap gap-2 sm:gap-4 mb-2 sm:mb-4 w-full justify-center">
-                <div className="bg-accent dark:bg-gray-700 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium flex items-center">
-                  <FileText className="h-3 w-3 mr-1" />
-                  PDF
-                </div>
-                <div className="bg-accent dark:bg-gray-700 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium flex items-center">
-                  <FileText className="h-3 w-3 mr-1" />
-                  DOCX
-                </div>
-                <div className="bg-accent dark:bg-gray-700 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium flex items-center">
-                  <FileText className="h-3 w-3 mr-1" />
-                  TXT
-                </div>
-                <div className="bg-accent dark:bg-gray-700 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium flex items-center">
-                  <FileText className="h-3 w-3 mr-1" />
-                  CSV
-                </div>
+                {/* Loading indicator while sending message */}
+                {isSendingMessage && (
+                  <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <div className="w-4 h-4 sm:w-5 h-5 text-primary-foreground">P</div>
+                    </div>
+                    <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
+                      <div className="flex items-center">
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-2" />
+                        <p className="text-xs sm:text-sm">Thinking...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Element to scroll to when new messages arrive */}
+                <div ref={messagesEndRef} />
               </div>
               
+              {/* Chat input */}
+              <div className="border-t p-2 sm:p-4">
+                <form onSubmit={sendMessage} className="max-w-[85%] sm:max-w-[75%] mx-auto flex items-center bg-accent rounded-lg px-3 sm:px-4 py-1 sm:py-2">
+                  <input
+                    type="text"
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder="Ask a question about your documents..."
+                    className="flex-1 bg-transparent border-0 focus:ring-0 text-xs sm:text-sm outline-none"
+                    disabled={isSendingMessage || !chatLoaded && uploadedFiles.length === 0}
+                  />
+                  <button 
+                    type="submit"
+                    className={cn(
+                      "ml-1 sm:ml-2 rounded-full p-1.5 sm:p-2 text-primary-foreground flex items-center justify-center",
+                      isSendingMessage || !chatLoaded && uploadedFiles.length === 0 
+                        ? "bg-piper-blue/20 dark:bg-piper-cyan/20  cursor-not-allowed" 
+                        : "bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90"
+                    )}
+                    disabled={isSendingMessage || !chatLoaded && uploadedFiles.length === 0}
+                  >
+                    {isSendingMessage ? (
+                      <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-3 w-3 sm:h-4 sm:w-4" />
+                    )}
+                  </button>
+                </form>
+              </div>
             </div>
+          )}
 
-            <div className="w-full max-w-xs sm:max-w-md mt-3 sm:mt-6 pb-3 sm:pb-6 md:pb-0">
-            <h4 className="text-xs sm:text-sm font-normal mb-1 sm:mb-2">Selected Files</h4>
+          {/* Quiz tab content */}
+          {activeTab === "quiz" && (
+            <div className="p-3 sm:p-6 h-full overflow-y-auto">
+              <div className="max-w-full sm:max-w-lg mx-auto pb-4 space-y-4 sm:space-y-6">
+                {!quizActive ? (
+                  // Quiz generator panel
+                  <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+                    <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Generate Quiz</h3>
 
-              <AnimatePresence>
-                  <div className="space-y-2">
-                    {files.map((file, index) => (
-                      <motion.div
-                        key={`${file.name}-${index}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                         className="flex items-center justify-between p-2 sm:p-3 bg-accent rounded-lg relative overflow-hidden"
-                      >
-                        <div className="flex items-center overflow-hidden">
-                        <div className="flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
-                            {getFileIcon(file.type)}
+                    <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                          Select Documents
+                        </label>
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <input type="checkbox" id="doc1" className="mr-2" />
+                            <label htmlFor="doc1" className="text-xs sm:text-sm">Machine Learning Guide.pdf</label>
                           </div>
-
-                        <span className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[180px]">{file.name}</span>
+                          <div className="flex items-center">
+                            <input type="checkbox" id="doc2" className="mr-2" />
+                            <label htmlFor="doc2" className="text-xs sm:text-sm">Data Science Concepts.pdf</label>
+                          </div>
+                          <div className="flex items-center">
+                            <input type="checkbox" id="doc3" className="mr-2" />
+                            <label htmlFor="doc3" className="text-xs sm:text-sm">Deep Learning Basics.pdf</label>
+                          </div>
                         </div>
-                        <div className="flex items-center flex-shrink-0">
-                          {isUploading && uploadProgress[file.name] !== undefined ? (
-                            <span className="text-xs text-muted-foreground mr-1 sm:mr-2">{uploadProgress[file.name]}%</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground mr-1 sm:mr-2">{getFileSize(file.size)}</span>
-                          )}
-                          <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeFile(index)
-                          }}
-                          disabled={isUploading}
-                          className="p-1 rounded-sm hover:bg-red-200 dark:hover:bg-red-300 hover:text-red-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                          aria-label="Remove file"
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Number of Questions</label>
+                        <input
+                          type="number"
+                          className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
+                          defaultValue="10"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
+                        <div className="flex flex-wrap gap-2">
+                          <button 
+                            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                              difficultyLevel === "beginner" 
+                                ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                                : "bg-accent"
+                            }`}
+                            onClick={() => handleDifficultyChange("beginner")}
                           >
-                            <X className="h-3 sm:h-4 w-3 sm:w-4" />
+                            Beginner
+                          </button>
+                          <button 
+                            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                              difficultyLevel === "intermediate" 
+                                ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                                : "bg-accent"
+                            }`}
+                            onClick={() => handleDifficultyChange("intermediate")}
+                          >
+                            Intermediate
+                          </button>
+                          <button 
+                            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                              difficultyLevel === "advanced" 
+                                ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
+                                : "bg-accent"
+                            }`}
+                            onClick={() => handleDifficultyChange("advanced")}
+                          >
+                            Advanced
                           </button>
                         </div>
-                        {isUploading && uploadProgress[file.name] !== undefined && (
-                          <div className="absolute bottom-0 left-0 h-1 bg-piper-blue dark:bg-piper-cyan" style={{ width: `${uploadProgress[file.name]}%` }}></div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
+                      </div>
 
-                  {files.length === 0 && (
-                     <div className="flex items-center">
-                     <span className="text-xs text-muted-foreground mr-2">No Files Uploaded Yet</span>
-                   </div>
-                  )}
-              </AnimatePresence>
-
-              {uploadError && (
-                <div className="mt-3 p-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded flex items-center">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  {uploadError}
-                </div>
-              )}
-
-              {duplicateError && (
-                <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded flex items-center">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  {duplicateError}
-                </div>
-              )}
-
-              {files.length > 0 && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 sm:mt-4">
-                  <button 
-                    onClick={handleUploadFiles}
-                    disabled={isUploading}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan dark:hover:bg-piper-cyan/90 hover:bg-piper-blue/90 transition-colors disabled:opacity-70"
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : 'Process Files'}
-                  </button>
-                </motion.div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Chat tab content */}
-        {activeTab === "chat" && (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
-              {/* AI message */} 
-              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground">P</div>
-                </div>
-                <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                  <p className="text-xs sm:text-sm">
-                    I've processed your documents on machine learning. What would you like to know about neural networks
-                    or deep learning concepts?
-                  </p>
-                </div>
-              </div>
-
-              {/* User message */}
-              <div className="flex items-start justify-end space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%] ml-auto">
-                <div className="bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue font-medium text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm">
-                  <p className="text-xs sm:text-sm">Can you explain the difference between CNN and RNN models in simple terms?</p>
-                </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                  <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              {/* AI response */}
-              <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground">P</div>
-                </div>
-                <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                  <p className="text-xs sm:text-sm">
-                    CNNs (Convolutional Neural Networks) are specialized for grid-like data such as images. They use filters to detect patterns like edges and textures, making them excellent for image recognition tasks.
-                    <br /><br />
-                    RNNs (Recurrent Neural Networks) are designed for sequential data like text or time series. They have a "memory" that allows them to consider previous inputs when processing the current input, making them good for language processing or speech recognition.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Chat input */}
-            <div className="border-t p-2 sm:p-4">
-              <div className="max-w-[85%] sm:max-w-[75%] mx-auto flex items-center bg-accent rounded-lg px-3 sm:px-4 py-1 sm:py-2">
-                <input
-                  type="text"
-                  placeholder="Ask a question about your documents..."
-                  className="flex-1 bg-transparent border-0 focus:ring-0 text-xs sm:text-sm outline-none"
-                />
-                <button className="ml-1 sm:ml-2 rounded-full p-1.5 sm:p-2 bg-primary text-primary-foreground flex items-center justify-center">
-                  <Send className="h-3 w-3 sm:h-4 sm:w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quiz tab content */}
-        {activeTab === "quiz" && (
-          <div className="p-3 sm:p-6 h-full overflow-y-auto">
-            <div className="max-w-full sm:max-w-lg mx-auto pb-4 space-y-4 sm:space-y-6">
-              {!quizActive ? (
-                // Quiz generator panel
-                <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Generate Quiz</h3>
-
-                  <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-                        Select Documents
-                      </label>
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <input type="checkbox" id="doc1" className="mr-2" />
-                          <label htmlFor="doc1" className="text-xs sm:text-sm">Machine Learning Guide.pdf</label>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Question Types</label>
+                        <div className="flex flex-wrap gap-2">
+                          <div className="flex items-center">
+                            <input type="checkbox" className="mr-1.5" defaultChecked />
+                            <span className="text-xs sm:text-sm">Multiple Choice</span>
+                          </div>
+                          <div className="flex items-center">
+                            <input type="checkbox" className="mr-1.5" defaultChecked />
+                            <span className="text-xs sm:text-sm">True/False</span>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <input type="checkbox" id="doc2" className="mr-2" />
-                          <label htmlFor="doc2" className="text-xs sm:text-sm">Data Science Concepts.pdf</label>
-                        </div>
-                        <div className="flex items-center">
-                          <input type="checkbox" id="doc3" className="mr-2" />
-                          <label htmlFor="doc3" className="text-xs sm:text-sm">Deep Learning Basics.pdf</label>
-                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Custom Prompt (Optional)</label>
+                        <input
+                          type="text"
+                          className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
+                          placeholder="e.g., Focus on neural networks and deep learning"
+                        />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Number of Questions</label>
-                      <input
-                        type="number"
-                        className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
-                        defaultValue="10"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
-                      <div className="flex flex-wrap gap-2">
-                        <button 
-                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
-                            difficultyLevel === "beginner" 
-                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                              : "bg-accent"
-                          }`}
-                          onClick={() => handleDifficultyChange("beginner")}
-                        >
-                          Beginner
-                        </button>
-                        <button 
-                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
-                            difficultyLevel === "intermediate" 
-                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                              : "bg-accent"
-                          }`}
-                          onClick={() => handleDifficultyChange("intermediate")}
-                        >
-                          Intermediate
-                        </button>
-                        <button 
-                          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
-                            difficultyLevel === "advanced" 
-                              ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                              : "bg-accent"
-                          }`}
-                          onClick={() => handleDifficultyChange("advanced")}
-                        >
-                          Advanced
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Question Types</label>
-                      <div className="flex flex-wrap gap-2">
-                        <div className="flex items-center">
-                          <input type="checkbox" className="mr-1.5" defaultChecked />
-                          <span className="text-xs sm:text-sm">Multiple Choice</span>
-                        </div>
-                        <div className="flex items-center">
-                          <input type="checkbox" className="mr-1.5" defaultChecked />
-                          <span className="text-xs sm:text-sm">True/False</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Custom Prompt (Optional)</label>
-                      <input
-                        type="text"
-                        className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
-                        placeholder="e.g., Focus on neural networks and deep learning"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={generateQuiz}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
-                    >
-                      Generate Quiz
-                    </button>
-                    {quizGenerated && (
+                    <div className="flex gap-2">
                       <button 
-                        onClick={startQuiz} 
-                        className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                        onClick={generateQuiz}
+                        className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
                       >
-                        Attend Quiz
+                        Generate Quiz
                       </button>
-                    )}
-                  </div>
-                  
-                  {quizGenerated && (
-                    <div className="mt-3 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded flex items-center">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Quiz successfully generated! You can attend it now.
+                      {quizGenerated && (
+                        <button 
+                          onClick={startQuiz} 
+                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                        >
+                          Attend Quiz
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              ) : (
-                // Quiz taking interface
-                <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-medium">Machine Learning Quiz</h3>
-                    {quizSubmitted && (
-                      <div className="bg-accent rounded-md px-2 py-1 text-xs sm:text-sm font-medium">
-                        Score: {calculateScore()}/{currentQuiz.length}
+                    
+                    {quizGenerated && (
+                      <div className="mt-3 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded flex items-center">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Quiz successfully generated! You can attend it now.
                       </div>
                     )}
                   </div>
-
-                  {showResults && (
-                    <div className={`mb-4 p-3 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
-                      {calculateScore() === currentQuiz.length ? (
-                        <div className="flex items-center">
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          <span>Perfect score! You got all {calculateScore()} questions correct.</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center">
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          <span>You got {calculateScore()} out of {currentQuiz.length} questions correct.</span>
+                ) : (
+                  // Quiz taking interface
+                  <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base sm:text-lg font-medium">Machine Learning Quiz</h3>
+                      {quizSubmitted && (
+                        <div className="bg-accent rounded-md px-2 py-1 text-xs sm:text-sm font-medium">
+                          Score: {calculateScore()}/{currentQuiz.length}
                         </div>
                       )}
                     </div>
-                  )}
 
-                  <div className="space-y-6">
-                    {currentQuiz.map((question, qIndex) => (
-                      <div key={question.id} className="border-b pb-4 last:border-b-0">
-                        <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
-                          Question {qIndex + 1} of {currentQuiz.length}
-                          {question.type === "mcq" ? " (Multiple Choice)" : " (True/False)"}
-                        </p>
-                        <p className="text-xs sm:text-sm mb-3 sm:mb-4">
-                          {question.question}
-                        </p>
-
-                        <div className="space-y-1.5 sm:space-y-2">
-                          {question.options.map((option, oIndex) => (
-                            <div 
-                              key={oIndex}
-                              className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${getAnswerClass(qIndex, oIndex)}`}
-                              onClick={() => handleAnswerSelect(qIndex, oIndex)}
-                            >
-                              <input 
-                                type="radio" 
-                                id={`q${qIndex}-${oIndex}`} 
-                                name={`q${qIndex}`}
-                                checked={userAnswers[qIndex] === oIndex}
-                                onChange={() => {}} // Controlled component
-                                disabled={quizSubmitted}
-                              />
-                              <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1">
-                                {option}
-                              </label>
-                              {showResults && userAnswers[qIndex] === oIndex && userAnswers[qIndex] !== question.correctAnswer && (
-                                <XCircle className="h-4 w-4 text-red-500" />
-                              )}
-                              {showResults && oIndex === question.correctAnswer && (
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        {showResults && (
-                          <div className="mt-2 text-xs bg-accent/50 p-2 rounded">
-                            <p className="font-medium">Explanation:</p>
-                            <p>{question.explanation}</p>
+                    {showResults && (
+                      <div className={`mb-4 p-3 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
+                        {calculateScore() === currentQuiz.length ? (
+                          <div className="flex items-center">
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            <span>Perfect score! You got all {calculateScore()} questions correct.</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <AlertTriangle className="h-4 w-4 mr-2" />
+                            <span>You got {calculateScore()} out of {currentQuiz.length} questions correct.</span>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {!quizSubmitted ? (
-                      <button 
-                        onClick={submitQuiz} 
-                        className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
-                      >
-                        Submit Quiz
-                      </button>
-                    ) : (
-                      <>
+                    <div className="space-y-6">
+                      {currentQuiz.map((question, qIndex) => (
+                        <div key={question.id} className="border-b pb-4 last:border-b-0">
+                          <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+                            Question {qIndex + 1} of {currentQuiz.length}
+                            {question.type === "mcq" ? " (Multiple Choice)" : " (True/False)"}
+                          </p>
+                          <p className="text-xs sm:text-sm mb-3 sm:mb-4">
+                            {question.question}
+                          </p>
+
+                          <div className="space-y-1.5 sm:space-y-2">
+                            {question.options.map((option, oIndex) => (
+                              <div 
+                                key={oIndex}
+                                className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${getAnswerClass(qIndex, oIndex)}`}
+                                onClick={() => handleAnswerSelect(qIndex, oIndex)}
+                              >
+                                <input 
+                                  type="radio" 
+                                  id={`q${qIndex}-${oIndex}`} 
+                                  name={`q${qIndex}`}
+                                  checked={userAnswers[qIndex] === oIndex}
+                                  onChange={() => {}} // Controlled component
+                                  disabled={quizSubmitted}
+                                />
+                                <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1">
+                                  {option}
+                                </label>
+                                {showResults && userAnswers[qIndex] === oIndex && userAnswers[qIndex] !== question.correctAnswer && (
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                )}
+                                {showResults && oIndex === question.correctAnswer && (
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {showResults && question.explanation && (
+                            <div className="mt-2 text-xs bg-accent/50 p-2 rounded">
+                              <p className="font-medium">Explanation:</p>
+                              <p>{question.explanation}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {!quizSubmitted ? (
                         <button 
-                          onClick={restartQuiz}
-                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-accent hover:bg-accent/90 transition-colors"
-                        >
-                          Retry Quiz
-                        </button>
-                        <button 
-                          onClick={() => setQuizActive(false)}
+                          onClick={submitQuiz} 
                           className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
                         >
-                          Back to Generator
+                          Submit Quiz
                         </button>
-                        <button 
-                          onClick={downloadQuizAsPdf}
-                          disabled={isDownloading}
-                          className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {isDownloading ? (
-                            <>
-                              <span className="animate-pulse mr-1">Generating PDF...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-3 w-3 mr-1" />
-                              Download Quiz
-                            </>
-                          )}
-                        </button>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <button 
+                            onClick={restartQuiz}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-accent hover:bg-accent/90 transition-colors"
+                          >
+                            Retry Quiz
+                          </button>
+                          <button 
+                            onClick={() => setQuizActive(false)}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
+                          >
+                            Back to Generator
+                          </button>
+                          <button 
+                            onClick={downloadQuizAsPdf}
+                            disabled={isDownloading}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isDownloading ? (
+                              <>
+                                <span className="animate-pulse mr-1">Generating PDF...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-3 w-3 mr-1" />
+                                Download Quiz
+                              </>
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

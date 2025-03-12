@@ -17,7 +17,10 @@ const chatSchema = new mongoose.Schema({
       userId: String, 
       fileName: String,
       fileUrl: String,
-      fileType: String, 
+      fileType: String,
+      fileKey: String, // Added fileKey field that's used in the find operation
+      extractedText: String, // Added extractedText field for content retrieval
+      embeddingId: String,
       uploadedAt: { type: Date, default: Date.now },
     },
   ],
