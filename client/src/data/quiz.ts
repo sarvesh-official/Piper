@@ -1,4 +1,4 @@
-import { QuizQuestion } from "@/components/PiperFileUpload";
+import { QuizQuestion } from "@/components/PiperQuiz";
 
 export const dummyQuiz: QuizQuestion[] = [
   {
