@@ -137,15 +137,23 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
         const data = await response.json();
         console.log("Quiz API response:", data); // Debug log
         
-        // Handle the nested structure
+        // Handle the nested structure - updated to match all possible response formats
         if (data.quiz && Array.isArray(data.quiz.questions)) {
-          // Normalize question types for consistent handling
+          // Standard nested structure format
           const normalizedQuestions = data.quiz.questions.map(normalizeQuestionType);
           setCurrentQuiz(normalizedQuestions);
           setQuizTitle(data.quiz.title || "Quiz");
           setQuizGenerated(true);
           setHasExistingQuiz(true);
           setExistingQuizGeneratedAt(new Date(data.generatedAt));
+        } else if (data.quiz && Array.isArray(data.quiz)) {
+          // Handle the case where quiz is directly an array of questions
+          const normalizedQuestions = data.quiz.map(normalizeQuestionType);
+          setCurrentQuiz(normalizedQuestions);
+          setQuizTitle("Quiz");
+          setQuizGenerated(true);
+          setHasExistingQuiz(true);
+          setExistingQuizGeneratedAt(data.generatedAt ? new Date(data.generatedAt) : new Date());
         } else if (Array.isArray(data.quiz)) {
           // Direct array handling (fallback)
           const normalizedQuestions = data.quiz.map(normalizeQuestionType);
@@ -153,6 +161,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
           setQuizTitle("Quiz");
           setQuizGenerated(true);
           setHasExistingQuiz(true);
+          setExistingQuizGeneratedAt(data.generatedAt ? new Date(data.generatedAt) : new Date());
         } else {
           console.error("Unexpected quiz data format:", data);
           setHasExistingQuiz(false);
@@ -230,12 +239,17 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
       const quizResponse = await generateQuizFromApi(payload, token, chatId);
       console.log("Quiz generation response:", quizResponse); // Debug log
       
-      // Handle the nested structure from the API
+      // Handle the nested structure from the API - fix here to handle all response formats
       if (quizResponse.quiz && Array.isArray(quizResponse.quiz.questions)) {
-        // Normalize question types for consistent handling
+        // Standard nested structure with quiz.questions array
         const normalizedQuestions = quizResponse.quiz.questions.map(normalizeQuestionType);
         setCurrentQuiz(normalizedQuestions);
         setQuizTitle(quizResponse.quiz.title || "Quiz");
+      } else if (quizResponse.quiz && Array.isArray(quizResponse.quiz)) {
+        // Handle the case where quiz is directly an array of questions
+        const normalizedQuestions = quizResponse.quiz.map(normalizeQuestionType);
+        setCurrentQuiz(normalizedQuestions);
+        setQuizTitle("Quiz");
       } else if (Array.isArray(quizResponse)) {
         // Fallback for direct array response
         const normalizedQuestions = quizResponse.map(normalizeQuestionType);

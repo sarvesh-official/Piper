@@ -35,7 +35,7 @@ export const dummyQuiz: QuizQuestion[] = [
   },
   {
     id: 5,
-    type: "true_false",
+    type: "true/false",
     question: "A higher learning rate always leads to better model performance.",
     options: ["True", "False"],
     correctAnswer: 1,
