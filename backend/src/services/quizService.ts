@@ -98,7 +98,7 @@ export const generateQuizQuestions = async (
       
       {{
         "id": 1,
-        "type": "mcq",
+        "type": "mcq", or "type" : true/false
         "question": "Example question?",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": 2,
