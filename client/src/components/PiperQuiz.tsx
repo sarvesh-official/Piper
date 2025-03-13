@@ -499,10 +499,6 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
     setDifficultyLevel(level);
   };
 
-  // Add function to toggle regeneration
-  const toggleRegenerate = () => {
-    setForceRegenerate(prev => !prev);
-  };
 
   // Handler for question count change
   const handleQuestionCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -518,7 +514,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
 
   return (
     <div className="p-3 sm:p-6 h-full flex flex-col">
-      <div className="w-full max-w-full sm:max-w-lg mx-auto h-full flex flex-col">
+      <div className="w-full max-w-full sm:max-w-lg mx-auto h-full flex flex-col justify-center">
         {isLoadingExistingQuiz ? (
           // Show loading state with better centering
           <div className="flex items-center justify-center p-8 border rounded-lg bg-background dark:bg-piper-darkblue/50 shadow-sm">
@@ -665,8 +661,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
             </div>
           </div>
         ) : hasExistingQuiz && !showQuizGenerator ? (
-          // Show existing quiz options with consistent styling
-          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm">
+          // Show existing quiz options with consistent styling and vertical centering
+          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm self-center w-full">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base sm:text-lg font-medium text-foreground">{quizTitle || "Quiz Available"}</h3>
               {existingQuizGeneratedAt && (
@@ -736,8 +732,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
             </div>
           </div>
         ) : (
-          // Quiz generator panel with improved styling and centering
-          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm">
+          // Quiz generator panel with improved styling and vertical centering
+          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm self-center w-full">
             {/* ...existing code... */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base sm:text-lg font-medium text-foreground">Generate Quiz</h3>
