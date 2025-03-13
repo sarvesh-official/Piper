@@ -93,7 +93,8 @@ export const generateQuiz = async (req: Request, res: Response) => {
       difficulty,
       questionTypes,
       customPrompt,
-      chatId
+      chatId,
+      forceRegenerate  // Pass the forceRegenerate flag to the service
     });
 
     res.status(200).json({ 

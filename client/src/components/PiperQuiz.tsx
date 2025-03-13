@@ -13,11 +13,22 @@ interface PiperQuizProps {
   uploadedFiles?: { fileName: string; fileUrl: string; fileKey: string }[];
   chatId: string;
 }
+
+// Add interface for the API response structure
+interface QuizApiResponse {
+  quiz: {
+    title: string;
+    questions: QuizQuestion[];
+  };
+  isExisting: boolean;
+  generatedAt: string;
+}
   
 export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps) {
   // Quiz states
   const [quizActive, setQuizActive] = useState(false)
   const [currentQuiz, setCurrentQuiz] = useState<QuizQuestion[]>([])
+  const [quizTitle, setQuizTitle] = useState<string>("")
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([])
   const [showResults, setShowResults] = useState(false)
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -90,6 +101,19 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
     }));
   };
 
+  // Function to normalize question types for consistent handling
+  const normalizeQuestionType = (question: any): QuizQuestion => {
+    // Make a copy to avoid mutating the original
+    const normalizedQuestion = { ...question };
+    
+    // Handle different question type formats
+    if (normalizedQuestion.type === "truefalse" || normalizedQuestion.type === "true_false") {
+      normalizedQuestion.type = "trueFalse"; // Normalize to the expected type
+    }
+    
+    return normalizedQuestion as QuizQuestion;
+  };
+
   // Function to fetch existing quiz for this chat
   const fetchExistingQuiz = async () => {
     try {
@@ -109,10 +133,29 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
       
       if (response.ok) {
         const data = await response.json();
-        setCurrentQuiz(data.quiz);
-        setQuizGenerated(true);
-        setHasExistingQuiz(true);
-        setExistingQuizGeneratedAt(new Date(data.generatedAt));
+        console.log("Quiz API response:", data); // Debug log
+        
+        // Handle the nested structure
+        if (data.quiz && Array.isArray(data.quiz.questions)) {
+          // Normalize question types for consistent handling
+          const normalizedQuestions = data.quiz.questions.map(normalizeQuestionType);
+          setCurrentQuiz(normalizedQuestions);
+          setQuizTitle(data.quiz.title || "Quiz");
+          setQuizGenerated(true);
+          setHasExistingQuiz(true);
+          setExistingQuizGeneratedAt(new Date(data.generatedAt));
+        } else if (Array.isArray(data.quiz)) {
+          // Direct array handling (fallback)
+          const normalizedQuestions = data.quiz.map(normalizeQuestionType);
+          setCurrentQuiz(normalizedQuestions);
+          setQuizTitle("Quiz");
+          setQuizGenerated(true);
+          setHasExistingQuiz(true);
+        } else {
+          console.error("Unexpected quiz data format:", data);
+          setHasExistingQuiz(false);
+          setShowQuizGenerator(true);
+        }
       } else {
         // No existing quiz, show generator
         setHasExistingQuiz(false);
@@ -171,29 +214,47 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
         difficulty: difficultyLevel,
         questionTypes: selectedQuestionTypes,
         customPrompt: customPrompt || undefined,
-        forceRegenerate // Add this flag to force regeneration
+        forceRegenerate: true // Always set to true when manually generating
       };
+      
+      console.log("Quiz generation payload:", payload); // Debug log
+      
       const token = await getToken();
 
       if (!token) {
         throw new Error("Authentication token is missing");
       }
       // Call API to generate quiz with all required parameters
-      const quiz = await generateQuizFromApi(payload, token, chatId);
+      const quizResponse = await generateQuizFromApi(payload, token, chatId);
+      console.log("Quiz generation response:", quizResponse); // Debug log
       
-      // Set generated quiz
-      setCurrentQuiz(quiz);
+      // Handle the nested structure from the API
+      if (quizResponse.quiz && Array.isArray(quizResponse.quiz.questions)) {
+        // Normalize question types for consistent handling
+        const normalizedQuestions = quizResponse.quiz.questions.map(normalizeQuestionType);
+        setCurrentQuiz(normalizedQuestions);
+        setQuizTitle(quizResponse.quiz.title || "Quiz");
+      } else if (Array.isArray(quizResponse)) {
+        // Fallback for direct array response
+        const normalizedQuestions = quizResponse.map(normalizeQuestionType);
+        setCurrentQuiz(normalizedQuestions);
+        setQuizTitle("Quiz");
+      } else {
+        console.error("Unexpected quiz generation response format:", quizResponse);
+        throw new Error("Invalid quiz format received from server");
+      }
+      
       setQuizGenerated(true);
       setHasExistingQuiz(true);
       setExistingQuizGeneratedAt(new Date());
       
-      // Reset forceRegenerate after successful generation
-      setForceRegenerate(false);
     } catch (error) {
       console.error("Error in quiz generation:", error);
       setGenerationError((error as Error).message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsGenerating(false);
+      // Reset forceRegenerate after attempt (whether successful or not)
+      setForceRegenerate(false);
     }
   };
 
@@ -243,13 +304,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
       
       const correctAnswer = currentQuiz[index].correctAnswer;
       
-      // Handle both number and string comparisons
-      if (typeof answer === 'number' && typeof correctAnswer === 'number') {
-        return answer === correctAnswer ? score + 1 : score;
-      }
-      
-      // Convert to strings for consistent comparison if types don't match
-      return String(answer) === String(correctAnswer) ? score + 1 : score;
+      // Convert both to numbers for comparison
+      return Number(answer) === Number(correctAnswer) ? score + 1 : score;
     }, 0);
   };
 
@@ -268,7 +324,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
   const getAnswerClass = (questionIndex: number, optionIndex: number) => {
     if (!showResults) return "";
     
-    const isCorrect = currentQuiz[questionIndex].correctAnswer === optionIndex;
+    const isCorrect = Number(currentQuiz[questionIndex].correctAnswer) === optionIndex;
     const isSelected = userAnswers[questionIndex] === optionIndex;
     
     if (isSelected && isCorrect) return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-500";
@@ -290,7 +346,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
       // Add title
       doc.setFontSize(20);
       doc.setTextColor(0, 0, 128);
-      doc.text("Machine Learning Quiz", pageWidth / 2, 20, { align: "center" });
+      doc.text(quizTitle || "Quiz", pageWidth / 2, 20, { align: "center" });
       
       // Add score if quiz is submitted
       if (quizSubmitted) {
@@ -491,52 +547,58 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
 
             {/* Questions container with proper scrolling */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-              {currentQuiz.map((question, qIndex) => (
-                <div key={question.id} className="border-b pb-4 last:border-b-0">
-                  <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
-                    Question {qIndex + 1} of {currentQuiz.length}
-                    {question.type === "mcq" ? " (Multiple Choice)" : " (True/False)"}
-                  </p>
-                  <p className="text-xs sm:text-sm mb-3 sm:mb-4 font-medium">
-                    {question.question}
-                  </p>
+              {Array.isArray(currentQuiz) && currentQuiz.length > 0 ? (
+                currentQuiz.map((question, qIndex) => (
+                  <div key={question.id || qIndex} className="border-b pb-4 last:border-b-0">
+                    <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+                      Question {qIndex + 1} of {currentQuiz.length}
+                      {question.type === "mcq" ? " (Multiple Choice)" : question.type === "trueFalse" || question.type === "truefalse" || question.type === "true_false" ? " (True/False)" : ""}
+                    </p>
+                    <p className="text-xs sm:text-sm mb-3 sm:mb-4 font-medium">
+                      {question.question}
+                    </p>
 
-                  <div className="space-y-1.5 sm:space-y-2">
-                    {question.options.map((option, oIndex) => (
-                      <div 
-                        key={oIndex}
-                        className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${getAnswerClass(qIndex, oIndex)}`}
-                        onClick={() => handleAnswerSelect(qIndex, oIndex)}
-                      >
-                        <input 
-                          type="radio" 
-                          id={`q${qIndex}-${oIndex}`} 
-                          name={`q${qIndex}`}
-                          checked={userAnswers[qIndex] === oIndex}
-                          onChange={() => {}} // Controlled component
-                          disabled={quizSubmitted}
-                        />
-                        <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1">
-                          {option}
-                        </label>
-                        {showResults && userAnswers[qIndex] === oIndex && userAnswers[qIndex] !== question.correctAnswer && (
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        )}
-                        {showResults && oIndex === question.correctAnswer && (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {showResults && question.explanation && (
-                    <div className="mt-2 text-xs bg-accent/50 p-2 rounded">
-                      <p className="font-medium">Explanation:</p>
-                      <p>{question.explanation}</p>
+                    <div className="space-y-1.5 sm:space-y-2">
+                      {question.options && question.options.map((option, oIndex) => (
+                        <div 
+                          key={oIndex}
+                          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${getAnswerClass(qIndex, oIndex)}`}
+                          onClick={() => handleAnswerSelect(qIndex, oIndex)}
+                        >
+                          <input 
+                            type="radio" 
+                            id={`q${qIndex}-${oIndex}`} 
+                            name={`q${qIndex}`}
+                            checked={userAnswers[qIndex] === oIndex}
+                            onChange={() => {}} // Controlled component
+                            disabled={quizSubmitted}
+                          />
+                          <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1">
+                            {option}
+                          </label>
+                          {showResults && userAnswers[qIndex] === oIndex && Number(userAnswers[qIndex]) !== Number(question.correctAnswer) && (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          {showResults && Number(oIndex) === Number(question.correctAnswer) && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  )}
+
+                    {showResults && question.explanation && (
+                      <div className="mt-2 text-xs bg-accent/50 p-2 rounded">
+                        <p className="font-medium">Explanation:</p>
+                        <p>{question.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center p-4 text-muted-foreground">
+                  No quiz questions available. Please try regenerating the quiz.
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Fixed action buttons at bottom */}
@@ -605,9 +667,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
         ) : hasExistingQuiz && !showQuizGenerator ? (
           // Show existing quiz options with consistent styling
           <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm">
-            {/* ...existing code... */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base sm:text-lg font-medium text-foreground">Quiz Available</h3>
+              <h3 className="text-base sm:text-lg font-medium text-foreground">{quizTitle || "Quiz Available"}</h3>
               {existingQuizGeneratedAt && (
                 <div className="text-xs text-muted-foreground">
                   Generated: {new Date(existingQuizGeneratedAt).toLocaleString()}
@@ -616,7 +677,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
             </div>
             
             <p className="text-sm mb-4 text-foreground/90">
-              A quiz with {currentQuiz.length} questions is ready for you to take.
+              A quiz with {Array.isArray(currentQuiz) ? currentQuiz.length : 0} questions is ready for you to take.
             </p>
             
             <div className="flex flex-wrap gap-2">
@@ -628,8 +689,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               </button>
               <button 
                 onClick={() => {
-                  setForceRegenerate(true);
-                  setShowQuizGenerator(true);
+                  setShowQuizGenerator(true); // Just show the generator, we'll set forceRegenerate when generating
                 }}
                 disabled={isGenerating}
                 className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-accent/80 hover:bg-accent transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
@@ -850,8 +910,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
             <div className="flex gap-2">
               <button 
                 onClick={() => {
-                  setForceRegenerate(quizGenerated);
-                  generateQuiz();
+                  generateQuiz(); // No need to set forceRegenerate here as it's always true in the function
                 }}
                 disabled={isGenerating}
                 className="flex-1 inline-flex items-center justify-center px-10 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
