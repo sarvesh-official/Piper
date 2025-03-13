@@ -1,6 +1,6 @@
 import { Message } from "@/types/chat";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 // Create a new chat
 export const createChat = async (userId: string, files: { fileName: string, fileUrl: string, fileKey: string }[], token: string) => {
