@@ -1,10 +1,6 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { 
-  ChatPromptTemplate, 
-  SystemMessagePromptTemplate,
-  HumanMessagePromptTemplate
-} from "@langchain/core/prompts";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { JsonOutputParser } from "@langchain/core/output_parsers";
 import Chat from "../model/chatModel";
 import dotenv from "dotenv";
 
@@ -17,7 +13,7 @@ export type QuizQuestion = {
   options: string[];
   correctAnswer: string | number;
   explanation?: string;
-}
+};
 
 interface GenerateQuizParams {
   extractedTexts: string[];
@@ -31,36 +27,58 @@ interface GenerateQuizParams {
   chatId: string;
 }
 
-export const generateQuizQuestions = async (params: GenerateQuizParams): Promise<QuizQuestion[]> => {
-  const { extractedTexts, questionCount, difficulty, questionTypes, customPrompt, chatId } = params;
-  
+export const generateQuizQuestions = async (
+  params: GenerateQuizParams
+): Promise<QuizQuestion[]> => {
+  const {
+    extractedTexts,
+    questionCount,
+    difficulty,
+    questionTypes,
+    customPrompt,
+    chatId
+  } = params;
+
   try {
     // Find the chat to get model information
     const chat = await Chat.findOne({ chatId });
 
     if (!chat) {
-      throw new Error('Chat not found');
+      throw new Error("Chat not found");
+    } 
+
+    if (!Array.isArray(extractedTexts) || extractedTexts.length === 0) {
+      throw new Error("Invalid extractedTexts input.");
     }
 
     // Combine all text content
-    const combinedText = extractedTexts.join('\n\n');
-    
-    // Determine which question types to include
-    let typeInstruction = '';
-    if (questionTypes.mcq && questionTypes.trueFalse) {
-      typeInstruction = 'Create a mix of multiple-choice and true/false questions.';
-    } else if (questionTypes.mcq) {
-      typeInstruction = 'Create only multiple-choice questions with 4 options each.';
-    } else if (questionTypes.trueFalse) {
-      typeInstruction = 'Create only true/false questions.';
-    } else {
-      // Default to MCQ if nothing specified
-      typeInstruction = 'Create multiple-choice questions with 4 options each.';
+    const combinedText = extractedTexts.join("\n\n");
+    if (!combinedText) {
+      throw new Error("No content provided for quiz generation.");
     }
 
-    // Create the system prompt with escaped JSON schema
-    const systemPrompt = `
-    You are a quiz generator. Based on the provided content, create ${questionCount} ${difficulty} level quiz questions.
+    // Validate and cap question count to ensure it's within reasonable limits
+    const validatedQuestionCount = Math.min(Math.max(questionCount || 10, 5), 20);
+    console.log(`Generating ${validatedQuestionCount} quiz questions at ${difficulty} level`);
+
+    // Determine which question types to include
+    let typeInstruction = "";
+    if (questionTypes.mcq && questionTypes.trueFalse) {
+      typeInstruction =
+        "Create a mix of multiple-choice and true/false questions.";
+    } else if (questionTypes.mcq) {
+      typeInstruction =
+        "Create only multiple-choice questions with 4 options each.";
+    } else if (questionTypes.trueFalse) {
+      typeInstruction = "Create only true/false questions.";
+    } else {
+      // Default to MCQ if nothing specified
+      typeInstruction = "Create multiple-choice questions with 4 options each.";
+    }
+
+    // Create the prompt template
+    const promptTemplate = PromptTemplate.fromTemplate(`
+    You are a quiz generator. Based on the provided content, create ${validatedQuestionCount} ${difficulty} level quiz questions.
     ${typeInstruction}
     
     For each question:
@@ -72,74 +90,43 @@ export const generateQuizQuestions = async (params: GenerateQuizParams): Promise
     
     Format your response as a valid JSON array of questions with this structure:
     [
-      {
+      title : "title of the quiz",
+      {{
         "id": 1,
         "type": "mcq",
         "question": "Example question?",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": 2,
         "explanation": "Option C is correct because..."
-      }
+    }}
     ]
     
-    ${customPrompt ? `ADDITIONAL INSTRUCTIONS: ${customPrompt}` : ''}
-    `;
+    ${customPrompt ? `ADDITIONAL INSTRUCTIONS: ${customPrompt}` : ""}
+    
+    CONTENT TO GENERATE QUESTIONS FROM:
+    {content}
+    `);
 
     // Initialize the model
     const model = new ChatGoogleGenerativeAI({
       modelName: "gemini-1.5-flash",
-      maxOutputTokens: 4096,
+      maxOutputTokens: 4096
     });
 
-    // Create a prompt template with separate system and human messages
-    const prompt = ChatPromptTemplate.fromMessages([
-      SystemMessagePromptTemplate.fromTemplate(systemPrompt),
-      HumanMessagePromptTemplate.fromTemplate("CONTENT TO GENERATE QUESTIONS FROM:\n{content}")
-    ]);
+    // Create an output parser for JSON structure
+    const parser = new JsonOutputParser();
 
-    const outputParser = new StringOutputParser();
-    const chain = prompt.pipe(model).pipe(outputParser);
-    
-    // Ensure the `content` variable is passed correctly
-    const response = await chain.invoke({
-      content: combinedText // This must match the variable name in the template
-    });
+    // Generate the quiz questions
+    const prompt = await promptTemplate.format({ content: combinedText });
+    const response = await model.invoke(prompt);
 
-    let generatedQuestions: QuizQuestion[] = [];
-
-    try {
-      // Extract JSON from the response
-      const jsonStart = response.indexOf('[');
-      const jsonEnd = response.lastIndexOf(']') + 1;
-      
-      if (jsonStart === -1 || jsonEnd === 0) {
-        throw new Error('Invalid JSON response format');
-      }
-      
-      const jsonStr = response.substring(jsonStart, jsonEnd);
-      const parsedQuestions = JSON.parse(jsonStr) as QuizQuestion[];
-      
-      // Validate the structure of each question
-      const validatedQuestions = parsedQuestions
-        .filter(q => 
-          q.id && 
-          (q.type === 'mcq' || q.type === 'true_false') &&
-          q.question &&
-          Array.isArray(q.options) &&
-          q.options.length > 0 &&
-          (typeof q.correctAnswer === 'number' || typeof q.correctAnswer === 'string')
-        )
-        .slice(0, questionCount);
-      
-      if (validatedQuestions.length === 0) {
-        throw new Error('No valid questions were generated');
-      }
-      
-      generatedQuestions = validatedQuestions;
-    } catch (parseError) {
-      console.error('Error parsing quiz response:', parseError);
-      throw new Error('Failed to parse quiz questions');
-    }
+    // Extract the text content from the response
+    const responseText = response.content.toString();
+    console.log("Quiz generation response:", responseText);
+    // Parse the JSON response
+    const generatedQuestions = (await parser.parse(
+      responseText
+    )) as QuizQuestion[];
 
     // Store the quiz in the chat document
     await Chat.findOneAndUpdate(
@@ -147,16 +134,25 @@ export const generateQuizQuestions = async (params: GenerateQuizParams): Promise
       {
         $push: {
           messages: [
-            { role: "user", content: `Generate ${questionCount} ${difficulty} quiz questions`, timestamp: new Date() },
-            { role: "assistant", content: "Quiz generated successfully", timestamp: new Date() }
+            {
+              role: "user",
+              content: `Generate ${validatedQuestionCount} ${difficulty} quiz questions`,
+              timestamp: new Date()
+            },
+            {
+              role: "assistant",
+              content: "Quiz generated successfully",
+              timestamp: new Date()
+            }
           ]
         },
         $set: {
-          // Store the quiz in a new field
+          // Store the quiz in a new field with settings that include the question count
           quiz: {
             questions: generatedQuestions,
             generatedAt: new Date(),
             settings: {
+              questionCount: validatedQuestionCount,
               difficulty,
               questionTypes,
               customPrompt: customPrompt || null
@@ -168,7 +164,7 @@ export const generateQuizQuestions = async (params: GenerateQuizParams): Promise
 
     return generatedQuestions;
   } catch (error) {
-    console.error('Error in quiz generation:', error);
+    console.error("Error in quiz generation:", error);
     throw error;
   }
 };

@@ -27,6 +27,7 @@ const quizSchema = new mongoose.Schema({
       type: String,
       enum: ['beginner', 'intermediate', 'advanced']
     },
+    questionCount: { type: Number, default: 10 },
     questionTypes: {
       mcq: Boolean,
       trueFalse: Boolean

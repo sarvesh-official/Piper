@@ -151,7 +151,7 @@ export const deleteChat = async (req: Request, res: Response) => {
       // }
       
       // Delete embeddings from Pinecone
-      await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));
+      // await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));
       
       console.log(`Successfully deleted resources for chat ${chatId}`);
     } catch (deleteError) {

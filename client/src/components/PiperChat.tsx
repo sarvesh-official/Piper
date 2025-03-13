@@ -10,6 +10,9 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import Image from "next/image"
 import { Message } from "@/types/chat"
 import PiperQuiz from "./PiperQuiz" 
+import { formatMessageText } from "@/utils/textFormatting"
+
+
 
 export default function PiperChat() {
   const router = useRouter()
@@ -215,6 +218,18 @@ export default function PiperChat() {
         .animate-fade-in {
           animation: fadeIn 0.3s ease-in-out forwards;
         }
+
+        .message-bubble {
+          min-width: 120px;
+          max-width: 80%;
+          word-break: break-word;
+        }
+
+        @media (min-width: 640px) {
+          .message-bubble {
+            max-width: 75%;
+          }
+        }
       `}</style>
       <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden flex flex-col h-[83vh] max-w-5xl mx-auto">
         {/* Tab navigation */}
@@ -320,12 +335,12 @@ export default function PiperChat() {
               )}
               
               {/* Dynamic chat content */}
-              <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+              <div className="flex-1 overflow-auto p-3 sm:p-6 space-y-6 sm:space-y-8 max-w-4xl mx-auto">
 
                 {messages.map((message, index) => (
                   message.role === "assistant" ? (
                     // AI message
-                    <div key={index} className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
+                    <div key={index} className="flex items-start space-x-3 sm:space-x-4 animate-fade-in">
                         <div className="w-8 h-8 rounded-full bg-piper-blue dark:bg-piper-cyan flex items-center justify-center flex-shrink-0">
                             <Image
                               src="/piper-mascot.svg"
@@ -334,26 +349,29 @@ export default function PiperChat() {
                               height={24}
                               className="w-5 h-5"
                             />
-                          </div>
-                      <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
-                        <p className="text-xs sm:text-sm whitespace-pre-wrap">
-                          {message.content}
-                        </p>
-                      </div>
+                        </div>
+                        <div className="message-bubble bg-accent rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                            {formatMessageText(message.content, uploadedFiles)}
+                          </p>
+                        </div>
                     </div>
                   ) : (
                     // User message
-                    <div key={index} className="flex items-start justify-end space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%] ml-auto">
-                      <div className="bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue font-medium text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm">
-                        <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div key={index} className="flex items-start justify-end space-x-3 sm:space-x-4 ml-auto animate-fade-in">
+                      <div className="message-bubble bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue text-primary-foreground rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                          {formatMessageText(message.content, uploadedFiles)}
+                        </p>
+                       
                       </div>
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {user?.imageUrl ? 
                           <Image alt="user"
-                          width={30}
-                          height={30}
-                            src={user.imageUrl} className="rounded-full object-cover" /> :
-                        <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                          width={36}
+                          height={36}
+                            src={user.imageUrl} className="w-full h-full object-cover" /> :
+                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
                         }
                       </div>
                     </div>
@@ -362,21 +380,23 @@ export default function PiperChat() {
 
                 {/* Loading indicator while sending message */}
                 {isSendingMessage && (
-                  <div className="flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[75%]">
-                   
-                    <div className="w-8 h-8 rounded-full bg-piper-blue dark:bg-piper-cyan flex items-center justify-center flex-shrink-0">
-                            <Image
-                              src="/piper-mascot.svg"
-                              alt="logo"
-                              width={24}
-                              height={24}
-                              className="w-5 h-5"
-                            />
-                          </div>
-                    <div className="bg-accent rounded-lg p-3 sm:p-4 shadow-sm">
+                  <div className="flex items-start space-x-3 sm:space-x-4 animate-fade-in">
+                    <div className="w-9 h-9 rounded-full bg-piper-blue dark:bg-piper-cyan flex items-center justify-center flex-shrink-0">
+                        <Image
+                          src="/piper-mascot.svg"
+                          alt="logo"
+                          width={24}
+                          height={24}
+                          className="w-5 h-5"
+                        />
+                    </div>
+                    <div className="message-bubble bg-accent rounded-2xl p-4 shadow-sm min-w-[120px]">
                       <div className="flex items-center">
-                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-2" />
-                        <p className="text-xs sm:text-sm">Thinking...</p>
+                        <div className="flex space-x-1">
+                          <span className="w-2 h-2 rounded-full bg-piper-blue dark:bg-piper-cyan animate-bounce" style={{animationDelay: '0ms'}}></span>
+                          <span className="w-2 h-2 rounded-full bg-piper-blue dark:bg-piper-cyan animate-bounce" style={{animationDelay: '150ms'}}></span>
+                          <span className="w-2 h-2 rounded-full bg-piper-blue dark:bg-piper-cyan animate-bounce" style={{animationDelay: '300ms'}}></span>
+                        </div>
                       </div>
                     </div>
                   </div>

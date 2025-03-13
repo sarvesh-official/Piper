@@ -27,6 +27,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [difficultyLevel, setDifficultyLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
   const [questionCount, setQuestionCount] = useState<number>(10)
+  const [maxQuestionCount, setMaxQuestionCount] = useState<number>(20)
   const [customPrompt, setCustomPrompt] = useState<string>("")
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState({
     mcq: true,
@@ -447,29 +448,33 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
     setForceRegenerate(prev => !prev);
   };
 
+  // Handler for question count change
+  const handleQuestionCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(event.target.value);
+    setQuestionCount(value);
+  };
+
+  // Helper function to check if all questions are answered
+  const allQuestionsAnswered = () => {
+    if (!userAnswers || userAnswers.length === 0) return false;
+    return userAnswers.every(answer => answer !== null);
+  };
+
   return (
-    <div className="p-3 sm:p-6 h-full overflow-y-auto">
-      <div className="max-w-full sm:max-w-lg mx-auto pb-4 space-y-4 sm:space-y-6">
+    <div className="p-3 sm:p-6 h-full flex flex-col">
+      <div className="w-full max-w-full sm:max-w-lg mx-auto h-full flex flex-col">
         {isLoadingExistingQuiz ? (
-          // Show loading state
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-2">Loading quiz...</span>
+          // Show loading state with better centering
+          <div className="flex items-center justify-center p-8 border rounded-lg bg-background dark:bg-piper-darkblue/50 shadow-sm">
+            <Loader2 className="h-8 w-8 animate-spin text-piper-blue dark:text-piper-cyan" />
+            <span className="ml-2 text-muted-foreground">Loading quiz...</span>
           </div>
         ) : quizActive ? (
-          // Quiz taking interface (no changes)
-          <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base sm:text-lg font-medium">Machine Learning Quiz</h3>
-              {quizSubmitted && (
-                <div className="bg-accent rounded-md px-2 py-1 text-xs sm:text-sm font-medium">
-                  Score: {calculateScore()}/{currentQuiz.length}
-                </div>
-              )}
-            </div>
-
+          // Quiz taking interface with single scrollbar and better layout
+          <div className="bg-white dark:bg-piper-darkblue border rounded-lg shadow-sm flex flex-col h-full relative overflow-hidden pb-20">
+            {/* Results message - only show if there are results */}
             {showResults && (
-              <div className={`mb-4 p-3 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
+              <div className={`p-3 m-4 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
                 {calculateScore() === currentQuiz.length ? (
                   <div className="flex items-center">
                     <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -484,14 +489,15 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               </div>
             )}
 
-            <div className="space-y-6">
+            {/* Questions container with proper scrolling */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {currentQuiz.map((question, qIndex) => (
                 <div key={question.id} className="border-b pb-4 last:border-b-0">
                   <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
                     Question {qIndex + 1} of {currentQuiz.length}
                     {question.type === "mcq" ? " (Multiple Choice)" : " (True/False)"}
                   </p>
-                  <p className="text-xs sm:text-sm mb-3 sm:mb-4">
+                  <p className="text-xs sm:text-sm mb-3 sm:mb-4 font-medium">
                     {question.question}
                   </p>
 
@@ -533,53 +539,75 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               ))}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              {!quizSubmitted ? (
-                <button 
-                  onClick={submitQuiz} 
-                  className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
-                >
-                  Submit Quiz
-                </button>
-              ) : (
-                <>
+            {/* Fixed action buttons at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-piper-darkblue p-3 border-t">
+              <div className="flex flex-wrap gap-2">
+                {!quizSubmitted ? (
                   <button 
-                    onClick={restartQuiz}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-accent hover:bg-accent/90 transition-colors"
+                    onClick={submitQuiz} 
+                    disabled={!allQuestionsAnswered()}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Retry Quiz
-                  </button>
-                  <button 
-                    onClick={() => setQuizActive(false)}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
-                  >
-                    Back to Generator
-                  </button>
-                  <button 
-                    onClick={downloadQuizAsPdf}
-                    disabled={isDownloading}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isDownloading ? (
-                      <>
-                        <span className="animate-pulse mr-1">Generating PDF...</span>
-                      </>
+                    {allQuestionsAnswered() ? (
+                      "Submit Quiz"
                     ) : (
-                      <>
-                        <Download className="h-3 w-3 mr-1" />
-                        Download Quiz
-                      </>
+                      `Answer all ${currentQuiz.length - userAnswers.filter(a => a !== null).length} remaining questions`
                     )}
                   </button>
-                </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={restartQuiz}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-accent/80 hover:bg-accent/90 transition-colors"
+                    >
+                      Retry Quiz
+                    </button>
+                    <button 
+                      onClick={() => setQuizActive(false)}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors"
+                    >
+                      Back to Generator
+                    </button>
+                    <button 
+                      onClick={downloadQuizAsPdf}
+                      disabled={isDownloading}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <span className="animate-pulse mr-1">Generating PDF...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-3 w-3 mr-1" />
+                          Download Quiz
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              {!quizSubmitted && (
+                <div className="text-xs text-center mt-1 text-muted-foreground">
+                  {userAnswers.filter(a => a !== null).length} of {currentQuiz.length} questions answered
+                </div>
+              )}
+
+              {/* Show score here if submitted */}
+              {quizSubmitted && (
+                <div className="text-xs text-center mt-1 font-medium">
+                  Score: {calculateScore()}/{currentQuiz.length}
+                </div>
               )}
             </div>
           </div>
         ) : hasExistingQuiz && !showQuizGenerator ? (
-          // Show existing quiz options
-          <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+          // Show existing quiz options with consistent styling
+          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm">
+            {/* ...existing code... */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base sm:text-lg font-medium">Quiz Available</h3>
+              <h3 className="text-base sm:text-lg font-medium text-foreground">Quiz Available</h3>
               {existingQuizGeneratedAt && (
                 <div className="text-xs text-muted-foreground">
                   Generated: {new Date(existingQuizGeneratedAt).toLocaleString()}
@@ -587,24 +615,24 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               )}
             </div>
             
-            <p className="text-sm mb-4">
+            <p className="text-sm mb-4 text-foreground/90">
               A quiz with {currentQuiz.length} questions is ready for you to take.
             </p>
             
             <div className="flex flex-wrap gap-2">
               <button 
                 onClick={startQuiz} 
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
               >
                 Take Quiz
               </button>
               <button 
                 onClick={() => {
                   setForceRegenerate(true);
-                  generateQuiz();
+                  setShowQuizGenerator(true);
                 }}
                 disabled={isGenerating}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-accent hover:bg-accent/80 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-accent/80 hover:bg-accent transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
                   <>
@@ -614,18 +642,27 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                 ) : (
                   <>
                     <RefreshCw className="h-3 w-3 mr-2" />
-                    Generate New Questions
+                    Customize New Quiz
                   </>
                 )}
               </button>
             </div>
+            {/* Success message without regenerate checkbox */}
+            {quizGenerated && !isGenerating && (
+              <div className="mt-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-xs rounded flex items-center">
+                  <CheckCircle2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span>Quiz successfully generated! You can attend it now.</span>
+                </div>
+              </div>
+            )}
             
             {/* Option to download existing quiz */}
             <div className="mt-3 flex">
               <button 
                 onClick={downloadQuizAsPdf}
                 disabled={isDownloading}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
               >
                 {isDownloading ? (
                   <span className="animate-pulse">Generating PDF...</span>
@@ -637,28 +674,17 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                 )}
               </button>
             </div>
-            
-            <div className="mt-4 border-t pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Create Custom Quiz</h4>
-                <button 
-                  onClick={() => setShowQuizGenerator(true)}
-                  className="text-xs text-blue-500 hover:text-blue-700"
-                >
-                  Show Options
-                </button>
-              </div>
-            </div>
           </div>
         ) : (
-          // Quiz generator panel (no major changes)
-          <div className="dark:bg-piper-darkblue border rounded-lg p-3 sm:p-5">
+          // Quiz generator panel with improved styling and centering
+          <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-6 shadow-sm">
+            {/* ...existing code... */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base sm:text-lg font-medium">Generate Quiz</h3>
+              <h3 className="text-base sm:text-lg font-medium text-foreground">Generate Quiz</h3>
               {hasExistingQuiz && (
                 <button
                   onClick={() => setShowQuizGenerator(false)}
-                  className="text-xs text-blue-500 hover:text-blue-700"
+                  className="text-xs text-piper-blue dark:text-piper-cyan hover:underline"
                 >
                   Back to Existing Quiz
                 </button>
@@ -667,7 +693,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
 
             <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-foreground/80 mb-1">
                   Select Documents
                 </label>
                 <div className="space-y-1">
@@ -677,7 +703,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                         <input 
                           type="checkbox" 
                           id={`doc${index}`} 
-                          className="mr-2" 
+                          className="mr-2 accent-piper-blue dark:accent-piper-cyan" 
                           checked={selectedFiles.includes(file.fileKey)}
                           onChange={(e) => handleFileSelection(file.fileKey, e.target.checked)} 
                         />
@@ -690,7 +716,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                         <input 
                           type="checkbox" 
                           id="doc1" 
-                          className="mr-2"
+                          className="mr-2 accent-piper-blue dark:accent-piper-cyan"
                           checked={selectedFiles.includes("doc1")}
                           onChange={(e) => handleFileSelection("doc1", e.target.checked)} 
                         />
@@ -700,7 +726,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                         <input 
                           type="checkbox" 
                           id="doc2" 
-                          className="mr-2"
+                          className="mr-2 accent-piper-blue dark:accent-piper-cyan"
                           checked={selectedFiles.includes("doc2")}
                           onChange={(e) => handleFileSelection("doc2", e.target.checked)}
                         />
@@ -710,7 +736,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                         <input 
                           type="checkbox" 
                           id="doc3" 
-                          className="mr-2"
+                          className="mr-2 accent-piper-blue dark:accent-piper-cyan"
                           checked={selectedFiles.includes("doc3")}
                           onChange={(e) => handleFileSelection("doc3", e.target.checked)}
                         />
@@ -721,14 +747,33 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                 </div>                
               </div>
 
+              {/* Add question count slider */}
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
+                <label className="block text-xs sm:text-sm font-medium text-foreground/80 mb-1">
+                  Number of Questions: <span className="font-semibold text-piper-blue dark:text-piper-cyan">{questionCount}</span>
+                </label>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs">5</span>
+                  <input
+                    type="range"
+                    min="5"
+                    max={maxQuestionCount}
+                    value={questionCount}
+                    onChange={handleQuestionCountChange}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-piper-blue dark:accent-piper-cyan"
+                  />
+                  <span className="text-xs">{maxQuestionCount}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-foreground/80 mb-1">Difficulty Level</label>
                 <div className="flex flex-wrap gap-2">
                   <button 
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
                       difficultyLevel === "beginner" 
-                        ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                        : "bg-accent"
+                        ? "bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue" 
+                        : "bg-accent/70 hover:bg-accent/90"
                     }`}
                     onClick={() => handleDifficultyChange("beginner")}
                   >
@@ -737,8 +782,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                   <button 
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
                       difficultyLevel === "intermediate" 
-                        ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                        : "bg-accent"
+                        ? "bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue" 
+                        : "bg-accent/70 hover:bg-accent/90"
                     }`}
                     onClick={() => handleDifficultyChange("intermediate")}
                   >
@@ -747,8 +792,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                   <button 
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium ${
                       difficultyLevel === "advanced" 
-                        ? "bg-piper-blue dark:bg-piper-cyan text-primary-foreground dark:text-piper-darkblue" 
-                        : "bg-accent"
+                        ? "bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue" 
+                        : "bg-accent/70 hover:bg-accent/90"
                     }`}
                     onClick={() => handleDifficultyChange("advanced")}
                   >
@@ -758,13 +803,13 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Question Types</label>
+                <label className="block text-xs sm:text-sm font-medium text-foreground/80 mb-1">Question Types</label>
                 <div className="flex flex-wrap gap-2">
                   <div className="flex items-center">
                     <input 
                       type="checkbox" 
                       id="mcq" 
-                      className="mr-1.5"
+                      className="mr-1.5 accent-piper-blue dark:accent-piper-cyan"
                       checked={selectedQuestionTypes.mcq}
                       onChange={(e) => handleQuestionTypeChange('mcq', e.target.checked)}
                     />
@@ -774,7 +819,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                     <input 
                       type="checkbox" 
                       id="trueFalse" 
-                      className="mr-1.5"
+                      className="mr-1.5 accent-piper-blue dark:accent-piper-cyan"
                       checked={selectedQuestionTypes.trueFalse}
                       onChange={(e) => handleQuestionTypeChange('trueFalse', e.target.checked)} 
                     />
@@ -784,7 +829,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-muted-foreground mb-1">Custom Prompt (Optional)</label>
+                <label className="block text-xs sm:text-sm font-medium text-foreground/80 mb-1">Custom Prompt (Optional)</label>
                 <input
                   type="text"
                   className="block w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md bg-background text-xs sm:text-base"
@@ -796,7 +841,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
             </div>
 
             {generationError && (
-              <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded flex items-center">
+              <div className="mb-4 p-2.5 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded flex items-center">
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 {generationError}
               </div>
@@ -804,49 +849,34 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
 
             <div className="flex gap-2">
               <button 
-                onClick={generateQuiz}
+                onClick={() => {
+                  setForceRegenerate(quizGenerated);
+                  generateQuiz();
+                }}
                 disabled={isGenerating}
-                className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-primary-foreground bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center px-10 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                    Generating...
+                    {quizGenerated ? "Regenerating..." : "Generating..."}
                   </>
                 ) : (
-                  "Generate Quiz"
+                  <>
+                    {quizGenerated && <RefreshCw className="h-4 w-4 mr-2" />}
+                    {quizGenerated ? "Regenerate Quiz" : "Generate Quiz"}
+                  </>
                 )}
               </button>
               {quizGenerated && !isGenerating && (
                 <button 
                   onClick={startQuiz} 
-                  className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                  className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
                 >
                   Attend Quiz
                 </button>
               )}
             </div>
-            
-            {quizGenerated && !isGenerating && (
-              <div className="flex items-center justify-between mt-3">
-                <div className="p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded flex items-center">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Quiz successfully generated! You can attend it now.
-                </div>
-                
-                {/* Add Regenerate Quiz checkbox */}
-                <div className="flex items-center text-xs">
-                  <input 
-                    type="checkbox" 
-                    id="regenerateQuiz" 
-                    className="mr-1.5"
-                    checked={forceRegenerate} 
-                    onChange={toggleRegenerate}
-                  />
-                  <label htmlFor="regenerateQuiz">Regenerate new questions</label>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

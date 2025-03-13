@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { generateQuizQuestions } from "../services/QuizService";
 import Chat from "../model/chatModel";
+import { generateQuizQuestions } from "../services/quizService";
 
 interface GenerateQuizRequest {
   fileKeys: string[];
