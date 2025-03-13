@@ -753,7 +753,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                   <div key={question.id || qIndex} className="border-b pb-4 last:border-b-0">
                     <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
                       Question {qIndex + 1} of {currentQuiz.length}
-                      {question.type === "mcq" ? " (Multiple Choice)" : question.type === "true_false" ? " (True/False)" : ""}
+                      {question.type === "mcq" ? " (Multiple Choice)" : question.type === "true/false" ? " (True/False)" : ""}
                     </p>
                     <p className="text-xs sm:text-sm mb-3 sm:mb-4 font-medium">
                       {question.question}

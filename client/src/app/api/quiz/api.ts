@@ -3,7 +3,7 @@ import { API_URL } from "../file-upload/api";
 // Quiz question type definition
 export type QuizQuestion = {
   id: number;
-  type: "mcq" | "true_false" | "trueFalse";
+  type: "mcq" | "true/false";
   question: string;
   options: string[];
   correctAnswer: string | number;
