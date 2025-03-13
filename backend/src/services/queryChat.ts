@@ -8,7 +8,7 @@ import {
   MessagesPlaceholder
 } from "@langchain/core/prompts";
 import { generateEmbeddings } from "./embeddingService";
-import { pineconeIndex } from "./pineconeService";
+import { pinecone } from "./pineconeService";
 import dotenv from "dotenv";
 import { ChatMessage } from "../types/chat";
 
@@ -46,14 +46,29 @@ export const queryChat = async (
     });
     
     // Step 1: Generate embedding for the query
-    const queryEmbedding = await generateEmbeddings(query);
+    // generateEmbeddings returns number[][], but we need the first embedding array
+    const queryEmbeddingsResult = await generateEmbeddings(query);
+    
+    // Ensure we have at least one embedding
+    if (!queryEmbeddingsResult || queryEmbeddingsResult.length === 0) {
+      throw new Error("Failed to generate embeddings for the query");
+    }
+    
+    // Get the first embedding from the result (it's typically a single chunk for a query)
+    const queryEmbedding = queryEmbeddingsResult[0];
 
-    // Step 2: Search in Pinecone with query embedding
+    // Step 2: Search in Pinecone with query embedding using namespace
     console.log(`Searching Pinecone for userId: ${userId}`);
-    const searchResults = await pineconeIndex.query({
+    
+    // Get the index and namespace
+    const index = pinecone.index("chat-app");
+    const namespace = index.namespace(`user-${userId}`);
+    
+    // Query the namespace directly with the single embedding array
+    const searchResults = await namespace.query({
       vector: queryEmbedding,
       topK: 3,
-      filter: { userId: userId,chatId: chatId },
+      filter: { chatId: chatId },
       includeMetadata: true
     });
     

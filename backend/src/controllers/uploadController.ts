@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { uploadFileToS3 } from "../services/s3Service";
 import Chat from "../model/chatModel";
-import { generateEmbeddings, storeInPinecone, updateFileWithEmbeddingId } from "../services/embeddingService";
+import { generateEmbeddings, storeChunkedEmbeddings, updateFileWithEmbeddingId } from "../services/embeddingService";
 import { extractTextFromCSV, extractTextFromExcel, extractTextFromImage, extractTextFromPPTX } from "../utils/fileProcessor";
 import PdfParse from "pdf-parse";
 import mammoth from "mammoth";
@@ -84,24 +84,36 @@ export const uploadFilesAndExtractText = async (
       processedFiles.map(async ({ extractedText, fileKey, fileName }, index) => {
         if (extractedText) {
           try {
+            const textByteSize = Buffer.byteLength(extractedText, 'utf-8');
+            console.log(`Processing text for ${fileName}, size: ${textByteSize} bytes`);
+            
+            // Fix: The issue is here - embeddings is number[][] but we need to pass it to storeChunkedEmbeddings correctly
             const embeddings = await generateEmbeddings(extractedText);
-            const embeddingId = `${chat.chatId}-${fileKey}`;
-
-            // Store embeddings with extracted text in metadata
-            await storeInPinecone({
-              id: embeddingId,
-              values: embeddings,
-              metadata: {
+            const baseEmbeddingId = `${chat.chatId}-${fileKey}`;
+            
+            // Process embeddings and store them, whether single or multiple chunks
+            const embeddingIds = await storeChunkedEmbeddings(
+              baseEmbeddingId,
+              embeddings, // Pass the full array of embeddings (each one is a number[])
+              {
                 userId,
                 chatId: chat.chatId,
                 fileName: fileName,
-                extractedText: extractedText, // Include the extracted text in metadata
+                extractedText: extractedText
               }
-            });
-
-            // Update MongoDB with embeddingId
-            await updateFileWithEmbeddingId(chat.chatId, fileKey, embeddingId);
-            console.log(`Embeddings stored and updated for: ${fileKey} with ${extractedText.length} chars of text`);
+            );
+            
+            // If we have multiple embeddings, store as array, otherwise store as single string
+            const idToStore = embeddingIds.length > 1 ? embeddingIds : embeddingIds[0];
+            
+            // Update MongoDB with embedding ID(s)
+            await updateFileWithEmbeddingId(chat.chatId, fileKey, idToStore);
+            
+            if (embeddingIds.length > 1) {
+              console.log(`Chunked embeddings stored for: ${fileKey} (${embeddingIds.length} chunks)`);
+            } else {
+              console.log(`Embedding stored and updated for: ${fileKey} with ${extractedText.length} chars of text`);
+            }
           } catch (embeddingError) {
             console.error("Error generating or storing embeddings:", embeddingError);
           }
