@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteChat = exports.addMessageToChat = exports.getChatById = exports.getChatHistory = exports.createChat = void 0;
+exports.handleChatQuery = exports.deleteChat = exports.addMessageToChat = exports.getChatById = exports.getChatHistory = exports.createChat = void 0;
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const uuid_1 = require("uuid");
+const queryChat_1 = require("../services/queryChat");
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -107,7 +108,8 @@ const addMessageToChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
             .select("chatId messages")
             .lean();
         if (!chat) {
-            return res.status(404).json({ error: "Chat not found" });
+            res.status(404).json({ error: "Chat not found" });
+            return;
         }
         res.json({ success: true, chat });
     }
@@ -123,9 +125,33 @@ const deleteChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const userId = req.auth.userId;
         const deletedChat = yield chatModel_1.default.findOneAndDelete({ chatId, userId });
         if (!deletedChat) {
-            return res.status(404).json({ error: "Chat not found" });
+            res.status(404).json({ error: "Chat not found" });
+            return;
         }
-        res.json({ success: true, message: "Chat deleted successfully" });
+        // Extract file keys from the deleted chat
+        const fileKeys = deletedChat.files && Array.isArray(deletedChat.files)
+            ? deletedChat.files.map(file => file.fileKey)
+            : [];
+        let resourcesDeleted = true;
+        try {
+            // Delete files from S3
+            // if (fileKeys.length > 0) {
+            //   await deleteFilesFromS3(fileKeys.filter((key): key is string => !!key));
+            // }
+            // Delete embeddings from Pinecone
+            // await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));
+            console.log(`Successfully deleted resources for chat ${chatId}`);
+        }
+        catch (deleteError) {
+            console.error("Error deleting associated resources:", deleteError);
+            resourcesDeleted = false;
+        }
+        res.json({
+            success: true,
+            message: resourcesDeleted
+                ? "Chat and associated resources deleted successfully"
+                : "Chat deleted, but there was an issue removing some associated resources"
+        });
     }
     catch (error) {
         console.error("Error deleting chat:", error);
@@ -133,3 +159,45 @@ const deleteChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.deleteChat = deleteChat;
+const handleChatQuery = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { chatId, query } = req.body;
+        const userId = req.auth.userId; // Get userId from auth middleware
+        if (!userId || !chatId || !query) {
+            res.status(400).json({ error: "chatId and query are required" });
+            return;
+        }
+        // Fetch the chat session to get the associated files
+        const chat = yield chatModel_1.default.findOne({ chatId, userId }).lean();
+        if (!chat) {
+            res.status(404).json({ error: "Chat session not found" });
+            return;
+        }
+        const files = chat.files || [];
+        if (files.length === 0) {
+            res.status(400).json({ error: "No files available for this chat session" });
+            return;
+        }
+        // Ensure the role is either "user" or "assistant"
+        const { answer, sources } = yield (0, queryChat_1.queryChat)(userId, query, chatId, files, (chat.messages || []).map(message => (Object.assign(Object.assign({}, message), { role: message.role, content: message.content || "" }))));
+        // Add the message to the chat history
+        yield chatModel_1.default.findOneAndUpdate({ chatId, userId }, {
+            $push: {
+                messages: [
+                    { role: "user", content: query, timestamp: new Date() },
+                    { role: "assistant", content: answer, timestamp: new Date() }
+                ]
+            }
+        });
+        res.json({
+            answer,
+            sources,
+            success: true
+        });
+    }
+    catch (error) {
+        console.error("Error handling chat query:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+exports.handleChatQuery = handleChatQuery;

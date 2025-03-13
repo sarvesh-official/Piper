@@ -13,19 +13,22 @@ export type QuizQuestion = {
 // API request type
 export interface GenerateQuizRequest {
   fileKeys: string[];
-  questionCount: number;
+  questionCount: number; // This will now have values from 5-20
   difficulty: "beginner" | "intermediate" | "advanced";
   questionTypes: {
     mcq: boolean;
     trueFalse: boolean;
   };
   customPrompt?: string;
-  forceRegenerate?: boolean; // Add option to force regeneration
+  forceRegenerate?: boolean;
 }
 
 // Function to call backend API to generate quiz
 export const generateQuizFromApi = async (payload: GenerateQuizRequest, token: string, chatId: string) => {
   try {
+    // Ensure question count is within valid range (5-20)
+    const validatedQuestionCount = Math.min(Math.max(payload.questionCount, 5), 20);
+    
     const response = await fetch(`${API_URL}/api/quiz/generate`, {
       method: 'POST',
       headers: {
@@ -34,6 +37,7 @@ export const generateQuizFromApi = async (payload: GenerateQuizRequest, token: s
       },
       body: JSON.stringify({
         ...payload,
+        questionCount: validatedQuestionCount, // Use the validated count
         chatId
       }),
     });

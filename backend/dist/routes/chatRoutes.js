@@ -10,4 +10,7 @@ const router = express_1.default.Router();
 router.post("/create", authMiddleware_1.requireAuth, chatController_1.createChat);
 router.get("/history", authMiddleware_1.requireAuth, chatController_1.getChatHistory);
 router.get("/:chatId", authMiddleware_1.requireAuth, chatController_1.getChatById);
+router.post("/:chatId/message", authMiddleware_1.requireAuth, chatController_1.addMessageToChat);
+router.delete("/:chatId", authMiddleware_1.requireAuth, chatController_1.deleteChat);
+router.post("/query", authMiddleware_1.requireAuth, chatController_1.handleChatQuery);
 exports.default = router;

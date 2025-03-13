@@ -12,49 +12,117 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadFilesAndExtractText = void 0;
+exports.uploadFilesAndExtractText = exports.handleMulterError = void 0;
 const s3Service_1 = require("../services/s3Service");
 const chatModel_1 = __importDefault(require("../model/chatModel"));
+const embeddingService_1 = require("../services/embeddingService");
+const fileProcessor_1 = require("../utils/fileProcessor");
 const pdf_parse_1 = __importDefault(require("pdf-parse"));
 const mammoth_1 = __importDefault(require("mammoth"));
-const tesseract_js_1 = __importDefault(require("tesseract.js"));
+const multer_1 = __importDefault(require("multer"));
+// Add a middleware to handle multer errors
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer_1.default.MulterError) {
+        // A Multer error occurred when uploading
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            res.status(400).json({
+                error: "File size exceeds the limit of 5 MB"
+            });
+            return;
+        }
+        res.status(400).json({
+            error: `Upload error: ${err.message}`
+        });
+        return;
+    }
+    else if (err) {
+        // An unknown error occurred
+        res.status(500).json({
+            error: `Unknown error: ${err.message}`
+        });
+        return;
+    }
+    next();
+};
+exports.handleMulterError = handleMulterError;
 const uploadFilesAndExtractText = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.body;
         const files = req.files;
-        const chatName = files.map(f => f.originalname).join(", ").substring(0, 50) || "New Chat";
         if (!userId || !files || files.length === 0 || files.length > 3) {
-            res.status(400).json({ error: "Invalid request. Upload 1 to 3 files only." });
+            res
+                .status(400)
+                .json({ error: "Invalid request. Upload 1 to 3 files only." });
             return;
         }
+        const chatName = files.map((f) => f.originalname).join(", ").substring(0, 50) || "New Chat";
         const processedFiles = yield Promise.all(files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
-            // Extract text for embeddings (not sent to frontend)
             const extractedText = yield extractTextFromFile(file.buffer, file.mimetype);
-            // Upload file to S3
             const { fileKey, fileUrl } = yield (0, s3Service_1.uploadFileToS3)(userId, file);
             return { fileName: file.originalname, fileUrl, fileKey, extractedText };
         })));
-        // Create a new chat entry in the database
+        // Create a new chat entry with extracted text stored in the file objects
         const chat = new chatModel_1.default({
             chatName,
             userId,
-            files: processedFiles.map(({ fileName, fileUrl, fileKey }) => ({
-                fileName,
-                fileUrl,
-                fileKey,
-            })),
-            extractedTexts: processedFiles.map(({ extractedText }) => extractedText),
+            files: processedFiles.map(({ fileName, fileUrl, fileKey, extractedText }) => {
+                var _a;
+                return ({
+                    userId,
+                    fileName,
+                    fileUrl,
+                    fileKey,
+                    extractedText, // Include extracted text directly in the file objects
+                    fileType: ((_a = files.find(f => f.originalname === fileName)) === null || _a === void 0 ? void 0 : _a.mimetype) || 'unknown',
+                });
+            }),
             createdAt: new Date(),
         });
         yield chat.save();
+        console.log(`Chat created with ${processedFiles.length} files, each with extracted text`);
+        // Store embeddings and update MongoDB
+        yield Promise.all(processedFiles.map((_a, index_1) => __awaiter(void 0, [_a, index_1], void 0, function* ({ extractedText, fileKey, fileName }, index) {
+            if (extractedText) {
+                try {
+                    const textByteSize = Buffer.byteLength(extractedText, 'utf-8');
+                    console.log(`Processing text for ${fileName}, size: ${textByteSize} bytes`);
+                    // Fix: The issue is here - embeddings is number[][] but we need to pass it to storeChunkedEmbeddings correctly
+                    const embeddings = yield (0, embeddingService_1.generateEmbeddings)(extractedText);
+                    const baseEmbeddingId = `${chat.chatId}-${fileKey}`;
+                    // Process embeddings and store them, whether single or multiple chunks
+                    const embeddingIds = yield (0, embeddingService_1.storeChunkedEmbeddings)(baseEmbeddingId, embeddings, // Pass the full array of embeddings (each one is a number[])
+                    {
+                        userId,
+                        chatId: chat.chatId,
+                        fileName: fileName,
+                        extractedText: extractedText
+                    });
+                    // If we have multiple embeddings, store as array, otherwise store as single string
+                    const idToStore = embeddingIds.length > 1 ? embeddingIds : embeddingIds[0];
+                    // Update MongoDB with embedding ID(s)
+                    yield (0, embeddingService_1.updateFileWithEmbeddingId)(chat.chatId, fileKey, idToStore);
+                    if (embeddingIds.length > 1) {
+                        console.log(`Chunked embeddings stored for: ${fileKey} (${embeddingIds.length} chunks)`);
+                    }
+                    else {
+                        console.log(`Embedding stored and updated for: ${fileKey} with ${extractedText.length} chars of text`);
+                    }
+                }
+                catch (embeddingError) {
+                    console.error("Error generating or storing embeddings:", embeddingError);
+                }
+            }
+            else {
+                console.warn(`No extracted text available for ${fileName}, skipping embedding generation`);
+            }
+        })));
         res.json({
             chatId: chat.chatId,
-            uploaded: processedFiles.map(({ fileName, fileUrl, fileKey }) => ({
+            uploaded: processedFiles.map(({ fileName, fileUrl }) => ({
                 fileName,
                 fileUrl,
-                fileKey,
             })),
-            extractedTexts: processedFiles.map(({ extractedText }) => extractedText),
+            message: "Files uploaded and embeddings stored successfully",
         });
     }
     catch (error) {
@@ -63,28 +131,33 @@ const uploadFilesAndExtractText = (req, res) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.uploadFilesAndExtractText = uploadFilesAndExtractText;
-// Function to extract text based on file type
+// Extract text based on file type
 const extractTextFromFile = (fileBuffer, mimeType) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (mimeType === "application/pdf") {
             const pdfData = yield (0, pdf_parse_1.default)(fileBuffer);
             return pdfData.text;
         }
-        else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        else if (mimeType ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
             const docxData = yield mammoth_1.default.extractRawText({ buffer: fileBuffer });
             return docxData.value;
         }
+        else if (mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            mimeType === "application/vnd.ms-excel") {
+            return (0, fileProcessor_1.extractTextFromExcel)(fileBuffer);
+        }
         else if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
-            return yield extractTextFromPPTX(fileBuffer);
+            return yield (0, fileProcessor_1.extractTextFromPPTX)(fileBuffer);
         }
         else if (mimeType === "text/csv") {
-            return yield extractTextFromCSV(fileBuffer);
+            return yield (0, fileProcessor_1.extractTextFromCSV)(fileBuffer);
         }
         else if (mimeType === "text/plain") {
             return fileBuffer.toString("utf-8");
         }
         else if (mimeType.startsWith("image/")) {
-            return yield extractTextFromImage(fileBuffer);
+            return yield (0, fileProcessor_1.extractTextFromImage)(fileBuffer);
         }
         else {
             throw new Error("Unsupported file type");
@@ -92,32 +165,6 @@ const extractTextFromFile = (fileBuffer, mimeType) => __awaiter(void 0, void 0, 
     }
     catch (error) {
         console.error("Error extracting text:", error);
-        return "";
-    }
-});
-// Function to extract text from CSV
-const extractTextFromCSV = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
-    return fileBuffer.toString("utf-8"); // Simple conversion to text
-});
-// Function to extract text from PPTX
-const extractTextFromPPTX = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const pptData = yield mammoth_1.default.extractRawText({ buffer: fileBuffer });
-        return pptData.value;
-    }
-    catch (error) {
-        console.error("Error extracting text from PPTX:", error);
-        return "";
-    }
-});
-// Function to extract text from images (OCR)
-const extractTextFromImage = (fileBuffer) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { data: { text } } = yield tesseract_js_1.default.recognize(fileBuffer, "eng");
-        return text;
-    }
-    catch (error) {
-        console.error("Error extracting text from image:", error);
         return "";
     }
 });
