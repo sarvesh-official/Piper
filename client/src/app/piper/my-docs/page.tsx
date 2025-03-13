@@ -1,176 +1,17 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
-import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Download, File, FileText } from "lucide-react";
+import { Download, File, FileText } from "lucide-react";
 import "react-circular-progressbar/dist/styles.css";
-import { useTheme } from "@/provider/ThemeProvider";
-
-// Sample data - in a real app, this would come from an API
-const uploadedDocs = [
-  {
-    id: "doc1",
-    name: "NextJS_Tutorial.pdf",
-    topic: "How AI is Changing Education",
-    dateUploaded: "2023-10-15",
-  },
-  {
-    id: "doc2",
-    name: "AI_Education_Research.docx",
-    topic: "Research Paper",
-    dateUploaded: "2023-10-16",
-  },
-  {
-    id: "doc3",
-    name: "HTML_CSS_Guide.ppt",
-    topic: "Web Development Basics",
-    dateUploaded: "2023-10-17",
-  },
-  {
-    id: "doc13",
-    name: "NextJS_Tutorial.pdf",
-    topic: "How AI is Changing Education",
-    dateUploaded: "2023-10-15",
-  },
-  {
-    id: "doc21",
-    name: "AI_Education_Research.docx",
-    topic: "Research Paper",
-    dateUploaded: "2023-10-16",
-  },
-  {
-    id: "doc30",
-    name: "HTML_CSS_Guide.ppt",
-    topic: "Web Development Basics",
-    dateUploaded: "2023-10-17",
-  },
-  {
-    id: "doc12",
-    name: "NextJS_Tutorial.pdf",
-    topic: "How AI is Changing Education",
-    dateUploaded: "2023-10-15",
-  },
-  {
-    id: "doc24",
-    name: "AI_Education_Research.docx",
-    topic: "Research Paper",
-    dateUploaded: "2023-10-16",
-  },
-  {
-    id: "doc3f",
-    name: "HTML_CSS_Guide.ppt",
-    topic: "Web Development Basics",
-    dateUploaded: "2023-10-17",
-  },
-  {
-    id: "doc1a",
-    name: "NextJS_Tutorial.pdf",
-    topic: "How AI is Changing Education",
-    dateUploaded: "2023-10-15",
-  },
-  {
-    id: "doc2gg",
-    name: "AI_Education_Research.docx",
-    topic: "Research Paper",
-    dateUploaded: "2023-10-16",
-  },
-  {
-    id: "doc3da",
-    name: "HTML_CSS_Guide.ppt",
-    topic: "Web Development Basics",
-    dateUploaded: "2023-10-17",
-  },
-];
-
-const exportedDocs = [
-  {
-    id: "exp1aa",
-    name: "AI_Education_Quiz.pdf",
-    topic: "AI in Education Quiz",
-    dateGenerated: "2023-10-18",
-    type: "quiz",
-  },
-  {
-    id: "exp2ff",
-    name: "WebDev_Assessment.pdf",
-    topic: "Web Development Assessment",
-    dateGenerated: "2023-10-19",
-    type: "quiz",
-  },
-  {
-    id: "exp3qq",
-    name: "ML_Notes_Summary.csv",
-    topic: "Machine Learning Notes",
-    dateGenerated: "2023-10-20",
-    type: "notes",
-  },
-  {
-    id: "exp1",
-    name: "AI_Education_Quiz.pdf",
-    topic: "AI in Education Quiz",
-    dateGenerated: "2023-10-18",
-    type: "quiz",
-  },
-  {
-    id: "exp2a",
-    name: "WebDev_Assessment.pdf",
-    topic: "Web Development Assessment",
-    dateGenerated: "2023-10-19",
-    type: "quiz",
-  },
-  {
-    id: "exp39",
-    name: "ML_Notes_Summary.csv",
-    topic: "Machine Learning Notes",
-    dateGenerated: "2023-10-20",
-    type: "notes",
-  },
-  {
-    id: "exp10",
-    name: "AI_Education_Quiz.pdf",
-    topic: "AI in Education Quiz",
-    dateGenerated: "2023-10-18",
-    type: "quiz",
-  },
-  {
-    id: "exp22",
-    name: "WebDev_Assessment.pdf",
-    topic: "Web Development Assessment",
-    dateGenerated: "2023-10-19",
-    type: "quiz",
-  },
-  {
-    id: "exp36",
-    name: "ML_Notes_Summary.csv",
-    topic: "Machine Learning Notes",
-    dateGenerated: "2023-10-20",
-    type: "notes",
-  },
-  {
-    id: "exp13",
-    name: "AI_Education_Quiz.pdf",
-    topic: "AI in Education Quiz",
-    dateGenerated: "2023-10-18",
-    type: "quiz",
-  },
-  {
-    id: "exp21",
-    name: "WebDev_Assessment.pdf",
-    topic: "Web Development Assessment",
-    dateGenerated: "2023-10-19",
-    type: "quiz",
-  },
-  {
-    id: "exp32",
-    name: "ML_Notes_Summary.csv",
-    topic: "Machine Learning Notes",
-    dateGenerated: "2023-10-20",
-    type: "notes",
-  },
-];
-
+import {
+  getUserUploadedDocuments,
+  getUserGeneratedDocuments,
+  downloadDocument,
+  UploadedDocument,
+  GeneratedDocument
+} from "@/app/api/documents/api";
 
 const getFileIcon = (fileName: string) => {
   if (fileName.endsWith(".pdf")) return <FileText className="text-red-500" size={20} />;
@@ -181,34 +22,53 @@ const getFileIcon = (fileName: string) => {
 };
 
 const MyDocs = () => {
-  const { user } = useUser();
-  const router = useRouter();
-  const { theme } = useTheme();
   
-  const handleDownload = (docName: string) => {
-    // Create some sample content based on the document name
-    const content = `This is a simulated download of ${docName}.\nIn a production environment, this would be the actual file content.`;
+  const {getToken} = useAuth();
+
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDocument[]>([]);
+  const [generatedDocs, setGeneratedDocs] = useState<GeneratedDocument[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const token = await getToken();
+        
+        if (!token) {
+          throw new Error("Authentication token not available");
+        }
+        
+        const [uploaded, generated] = await Promise.all([
+          getUserUploadedDocuments(token),
+          getUserGeneratedDocuments(token)
+        ]);
+        
+        setUploadedDocs(uploaded);
+        setGeneratedDocs(generated);
+      } catch (err) {
+        console.error("Error fetching documents:", err);
+        setError("Failed to load your documents. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Create a Blob containing the content
-    const blob = new Blob([content], { type: 'text/plain' });
-    
-    // Create a URL for the Blob
-    const url = URL.createObjectURL(blob);
-    
-    // Create a temporary anchor element to trigger the download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = docName;
-    document.body.appendChild(a);
-    
-    // Trigger the download
-    a.click();
-    
-    // Clean up
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
+    fetchDocuments();
+  }, [getToken]);
+  
+  const handleDownload = async (doc: UploadedDocument | GeneratedDocument) => {
+    try {
+            
+      await downloadDocument(doc.fileUrl, doc.name);
+    } catch (err) {
+      console.error("Error downloading document:", err);
+      setError("Failed to download the document. Please try again later.");
+    }
   };
   
   const containerAnimation = {
@@ -226,6 +86,8 @@ const MyDocs = () => {
     show: { opacity: 1, y: 0 }
   };
 
+
+
   return (
     <div className="flex flex-col gap-4 sm:gap-6 max-w-5xl mx-auto p-3 sm:p-6 h-full min-h-[85vh]">
       {/* User Greeting */}
@@ -237,6 +99,12 @@ const MyDocs = () => {
       >
         My Documents
       </motion.h1>
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
       
       {/* Uploaded Documents Section */}
       <motion.div
@@ -252,7 +120,9 @@ const MyDocs = () => {
           initial="hidden"
           animate="show"
         >
-          {uploadedDocs.length > 0 ? (
+          {isLoading ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">Loading documents...</p>
+          ) : uploadedDocs.length > 0 ? (
             uploadedDocs.map((doc) => (
               <motion.div
                 key={doc.id}
@@ -268,7 +138,7 @@ const MyDocs = () => {
                     className="p-1 ml-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDownload(doc.name);
+                      handleDownload(doc);
                     }}
                     aria-label={`Download ${doc.name}`}
                   >
@@ -280,12 +150,12 @@ const MyDocs = () => {
               </motion.div>
             ))
           ) : (
-            <p className="text-sm text-gray-600 dark:text-gray-400">No documents available.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No documents uploaded yet.</p>
           )}
         </motion.div>
       </motion.div>
       
-      {/* Exported Documents Section */}
+      {/* Generated Documents Section */}
       <motion.div
         className="p-4 sm:p-6 bg-white dark:bg-gray-900 rounded-lg shadow-md"
         initial={{ opacity: 0, y: 20 }}
@@ -299,8 +169,10 @@ const MyDocs = () => {
           initial="hidden"
           animate="show"
         >
-          {exportedDocs.length > 0 ? (
-            exportedDocs.map((doc) => (
+          {isLoading ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">Loading documents...</p>
+          ) : generatedDocs.length > 0 ? (
+            generatedDocs.map((doc) => (
               <motion.div
                 key={doc.id}
                 className="relative cursor-pointer rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-gray-800 p-3 sm:p-4 hover:shadow-lg transition-all"
@@ -315,7 +187,7 @@ const MyDocs = () => {
                     className="p-1 ml-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDownload(doc.name);
+                      handleDownload(doc);
                     }}
                     aria-label={`Download ${doc.name}`}
                   >
@@ -332,7 +204,7 @@ const MyDocs = () => {
               </motion.div>
             ))
           ) : (
-            <p className="text-sm text-gray-600 dark:text-gray-400">No documents available</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No generated documents available</p>
           )}
         </motion.div>
       </motion.div>

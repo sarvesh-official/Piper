@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export interface IQuizQuestion {
   id: number;
-  type: 'mcq' | 'true/false';
+  type: 'mcq' | 'true/false'| 'true_false';  // Added 'true_false' to the type
   question: string;
   options: string[];
   correctAnswer: number | string;
@@ -85,7 +85,7 @@ const quizQuestionSchema = new mongoose.Schema({
   id: Number,
   type: {
     type: String,
-    enum: ['mcq', 'true/false'],
+    enum: ['mcq', 'true/false', 'true_false'],  // Added 'true_false' to the enum'true_false'], // Added 'true_false' to the type
     required: true
   },
   question: String,
