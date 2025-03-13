@@ -11,7 +11,7 @@ export const dummyQuiz: QuizQuestion[] = [
   },
   {
     id: 2,
-    type: "true_false",
+    type: "true/false",
     question: "Convolutional Neural Networks (CNNs) are primarily used for processing sequential data like text.",
     options: ["True", "False"],
     correctAnswer: 1,
