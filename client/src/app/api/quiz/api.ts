@@ -33,6 +33,13 @@ export interface GenerateQuizRequest {
   forceRegenerate?: boolean;
 }
 
+export interface SavedQuizDetails {
+  fileName: string;
+  fileUrl: string;
+  quizTitle: string;
+  savedAt?: string;
+}
+
 // Function to call backend API to generate quiz
 export const generateQuizFromApi = async (payload: GenerateQuizRequest, token: string, chatId: string): Promise<QuizApiResponse> => {
   try {
@@ -63,6 +70,52 @@ export const generateQuizFromApi = async (payload: GenerateQuizRequest, token: s
     console.error('Error generating quiz:', error);
     throw error;
   }
+};
+
+// Function to save quiz to My Documents
+export const saveQuizToDocuments = async (
+  file: File,
+  chatId: string,
+  quizDetails: {
+    quizTitle: string;
+    isSubmitted: boolean;
+    score?: number;
+    totalQuestions?: number;
+  },
+  token: string
+): Promise<SavedQuizDetails> => {
+  const formData = new FormData();
+  
+  formData.append("file", file);
+  formData.append("chatId", chatId);
+  formData.append("quizTitle", quizDetails.quizTitle);
+  formData.append("isSubmitted", quizDetails.isSubmitted.toString());
+  
+  if (quizDetails.isSubmitted && quizDetails.score !== undefined) {
+    formData.append("score", quizDetails.score.toString());
+  }
+  
+  if (quizDetails.totalQuestions !== undefined) {
+    formData.append("totalQuestions", quizDetails.totalQuestions.toString());
+  }
+
+  const response = await fetch(`${API_URL}/api/quiz/save-to-documents`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({
+      error: "An unexpected error occurred",
+    }));
+    throw new Error(errorData.error || `Error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.savedQuiz;
 };
 
 // Function to get an existing quiz for a chat

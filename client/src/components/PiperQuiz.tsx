@@ -6,7 +6,7 @@ import { dummyQuiz } from "@/data/quiz"
 import { generateQuizFromApi, GenerateQuizRequest, QuizQuestion } from "@/app/api/quiz/api"
 import { API_URL } from "@/app/api/file-upload/api"
 
-import { Download, AlertTriangle, CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react"
+import { Download, AlertTriangle, CheckCircle2, XCircle, Loader2, RefreshCw, Save } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 
 interface PiperQuizProps {
@@ -34,6 +34,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
   const [quizSubmitted, setQuizSubmitted] = useState(false)
   const [quizGenerated, setQuizGenerated] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isSavingToDocuments, setIsSavingToDocuments] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState<boolean | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [difficultyLevel, setDifficultyLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate")
@@ -494,6 +496,209 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
     }
   };
 
+  // Function to save quiz to My Documents
+  const saveQuizToMyDocuments = async () => {
+    setIsSavingToDocuments(true);
+    setSaveSuccess(null);
+    
+    try {
+      // Create a new jsPDF instance
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(0, 0, 128);
+      doc.text(quizTitle || "Quiz", pageWidth / 2, 20, { align: "center" });
+      
+      // Add score if quiz is submitted
+      if (quizSubmitted) {
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 0);
+        doc.text(
+          `Score: ${calculateScore()} out of ${currentQuiz.length}`,
+          pageWidth / 2,
+          30,
+          { align: "center" }
+        );
+      }
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Generated on: ${new Date().toLocaleDateString()}`,
+        pageWidth / 2,
+        38,
+        { align: "center" }
+      );
+      
+      doc.line(20, 42, pageWidth - 20, 42);
+      
+      let yPos = 50;
+      
+      // Loop through each question
+      currentQuiz.forEach((question, qIndex) => {
+        // Check if we need a new page
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        // Add question number and type
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(
+          `Question ${qIndex + 1} of ${currentQuiz.length} ${
+            question.type === "mcq" ? "(Multiple Choice)" : "(True/False)"
+          }`,
+          20, 
+          yPos
+        );
+        
+        // Add question text
+        doc.setFontSize(11);
+        doc.text(question.question, 20, yPos, {
+          maxWidth: pageWidth - 40,
+        });
+        
+        // Calculate text height - rough estimate
+        const textLines = doc.splitTextToSize(question.question, pageWidth - 40);
+        yPos += textLines.length * 6 + 5;
+        
+        // Add options
+        question.options.forEach((option, oIndex) => {
+          // Check if we need a new page
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          // Determine if this option is correct or selected
+          const isCorrect = oIndex === question.correctAnswer;
+          const isSelected = userAnswers[qIndex] === oIndex;
+          
+          // Set color based on correctness and selection
+          if (quizSubmitted) {
+            if (isSelected && isCorrect) {
+              doc.setTextColor(0, 128, 0); // Green for correct selection
+            } else if (isSelected && !isCorrect) {
+              doc.setTextColor(255, 0, 0); // Red for incorrect selection
+            } else if (isCorrect) {
+              doc.setTextColor(0, 128, 0); // Green for correct answer
+            } else {
+              doc.setTextColor(0, 0, 0); // Black for other options
+            }
+          } else {
+            doc.setTextColor(0, 0, 0); // Black for all options if quiz not submitted
+          }
+          
+          // Add option text
+          doc.text(`${String.fromCharCode(65 + oIndex)}. ${option}`, 25, yPos);
+          
+          // Add marker for correct/selected answer
+          if (quizSubmitted) {
+            if (isCorrect) {
+              doc.text("✓", 15, yPos);
+            }
+            if (isSelected && !isCorrect) {
+              doc.text("✗", 15, yPos);
+            }
+          }
+          
+          yPos += 7;
+        });
+        
+        // Add explanation if quiz is submitted
+        if (quizSubmitted && question.explanation) {
+          // Check if we need a new page
+          if (yPos > 250) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          yPos += 3;
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text("Explanation:", 20, yPos);
+          yPos += 5;
+          
+          // Add explanation text
+          doc.setFontSize(10);
+          doc.text(question.explanation, 25, yPos, {
+            maxWidth: pageWidth - 45,
+          });
+          
+          // Calculate text height
+          const explanationLines = doc.splitTextToSize(
+            question.explanation,
+            pageWidth - 45
+          );
+          yPos += explanationLines.length * 5 + 10;
+        } else {
+          yPos += 15;
+        }
+        
+        // Add a divider between questions
+        if (qIndex < currentQuiz.length - 1) {
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPos - 5, pageWidth - 20, yPos - 5);
+        }
+      });
+      
+      // Generate a Blob from the PDF
+      const pdfBlob = doc.output('blob');
+      
+      // Create a file from the blob
+      const pdfFile = new File([pdfBlob], `${quizTitle || 'quiz'}.pdf`, { type: 'application/pdf' });
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("chatId", chatId);
+      formData.append("quizTitle", quizTitle || "Quiz");
+      formData.append("isSubmitted", quizSubmitted.toString());
+      if (quizSubmitted) {
+        formData.append("score", calculateScore().toString());
+        formData.append("totalQuestions", currentQuiz.length.toString());
+      }
+      
+      // Get authentication token
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+      
+      // Upload to backend
+      const response = await fetch(`${API_URL}/api/quiz/save-to-documents`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to save quiz to My Documents");
+      }
+      
+      setSaveSuccess(true);
+      
+      // Show success notification
+      alert("Quiz successfully saved to Piper Documents. You can access it from My Documents.");
+      
+    } catch (error) {
+      console.error("Error saving quiz to My Documents:", error);
+      
+      // Clear the success message after 3 seconds
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(null);
+      }, 3000);
+    }
+  };
+
   // Handler for difficulty level selection
   const handleDifficultyChange = (level: "beginner" | "intermediate" | "advanced") => {
     setDifficultyLevel(level);
@@ -629,7 +834,7 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                     <button 
                       onClick={downloadQuizAsPdf}
                       disabled={isDownloading}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {isDownloading ? (
                         <>
@@ -638,7 +843,24 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                       ) : (
                         <>
                           <Download className="h-3 w-3 mr-1" />
-                          Download Quiz
+                          Download
+                        </>
+                      )}
+                    </button>
+                    <button 
+                      onClick={saveQuizToMyDocuments}
+                      disabled={isSavingToDocuments}
+                      className="inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isSavingToDocuments ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-3 w-3 mr-1" />
+                          Save to My Documents
                         </>
                       )}
                     </button>
@@ -656,6 +878,26 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               {quizSubmitted && (
                 <div className="text-xs text-center mt-1 font-medium">
                   Score: {calculateScore()}/{currentQuiz.length}
+                </div>
+              )}
+              
+              {/* Show save success/failure message */}
+              {saveSuccess !== null && (
+                <div className={`mt-2 p-1.5 rounded text-xs ${
+                  saveSuccess ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 
+                  'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                } flex items-center justify-center`}>
+                  {saveSuccess ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      <span>Successfully saved to My Documents!</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      <span>Failed to save. Please try again.</span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -713,8 +955,8 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
               </div>
             )}
             
-            {/* Option to download existing quiz */}
-            <div className="mt-3 flex">
+            {/* Options to download or save existing quiz */}
+            <div className="mt-3 flex flex-wrap gap-2">
               <button 
                 onClick={downloadQuizAsPdf}
                 disabled={isDownloading}
@@ -729,7 +971,44 @@ export default function PiperQuiz({ uploadedFiles = [], chatId}: PiperQuizProps)
                   </>
                 )}
               </button>
+              <button 
+                onClick={saveQuizToMyDocuments}
+                disabled={isSavingToDocuments}
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSavingToDocuments ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3 w-3 mr-2" />
+                    Save to My Documents
+                  </>
+                )}
+              </button>
             </div>
+            
+            {/* Show save success/failure message */}
+            {saveSuccess !== null && (
+              <div className={`mt-2 p-2 rounded text-sm ${
+                saveSuccess ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 
+                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+              } flex items-center justify-center`}>
+                {saveSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    <span>Successfully saved to My Documents!</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    <span>Failed to save. Please try again.</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           // Quiz generator panel with improved styling and vertical centering

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export interface IQuizQuestion {
   id: number;
-  type: 'mcq' | 'true_false';
+  type: 'mcq' | 'true/false';
   question: string;
   options: string[];
   correctAnswer: number | string;
@@ -20,10 +20,22 @@ export interface IQuizSettings {
   customPrompt?: string;
 }
 
+export interface ISavedQuiz {
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  quizTitle: string;
+  savedAt: Date;
+  isSubmitted: boolean;
+  score?: number;
+  totalQuestions?: number;
+}
+
 export interface IQuiz {
   questions: IQuizQuestion[];
   generatedAt: Date;
   settings: IQuizSettings;
+  savedQuizzes: ISavedQuiz[]; // Changed from optional to required property
 }
 
 export interface IFile {
@@ -73,7 +85,7 @@ const quizQuestionSchema = new mongoose.Schema({
   id: Number,
   type: {
     type: String,
-    enum: ['mcq', 'true_false'],
+    enum: ['mcq', 'true/false'],
     required: true
   },
   question: String,
@@ -83,6 +95,17 @@ const quizQuestionSchema = new mongoose.Schema({
     required: true
   },
   explanation: String
+});
+
+const savedQuizSchema = new mongoose.Schema({
+  fileName: { type: String, required: true },
+  fileUrl: { type: String, required: true },
+  fileKey: { type: String, required: true },
+  quizTitle: { type: String, required: true },
+  savedAt: { type: Date, default: Date.now },
+  isSubmitted: { type: Boolean, default: false },
+  score: { type: Number },
+  totalQuestions: { type: Number }
 });
 
 const quizSchema = new mongoose.Schema({
@@ -99,7 +122,8 @@ const quizSchema = new mongoose.Schema({
       trueFalse: Boolean
     },
     customPrompt: String
-  }
+  },
+  savedQuizzes: [savedQuizSchema]
 });
 
 const chatSchema = new Schema<IChat>({
