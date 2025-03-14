@@ -28,6 +28,32 @@ export default function PiperFileUpload() {
   // File size limit in bytes (5 MB)
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
   
+  // Accepted file types
+  const ACCEPTED_FILE_TYPES = [
+    // PDF
+    'application/pdf',
+    // Word documents
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    // Text files
+    'text/plain',
+    // CSV
+    'text/csv',
+    // Excel
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    // Images - all types
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/webp',
+    'image/tiff',
+    'image/svg+xml',
+  ];
+
+  const ACCEPTED_FILE_EXTENSIONS = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.svg';
+  
   // Tooltip states
   const debugTooltips = false // Set to true to debug tooltips if needed
 
@@ -89,6 +115,31 @@ export default function PiperFileUpload() {
       return
     }
 
+    // Check for unsupported file types
+    const unsupportedFiles = selectedFiles.filter(file => 
+      !ACCEPTED_FILE_TYPES.includes(file.type) && 
+      // For files where MIME type might not be detected properly
+      !ACCEPTED_FILE_TYPES.some(type => file.name.toLowerCase().endsWith(type.split('/')[1]))
+    );
+    
+    if (unsupportedFiles.length > 0) {
+      setUploadError(
+        unsupportedFiles.length === 1
+          ? `"${unsupportedFiles[0].name}" is not a supported file type.`
+          : `${unsupportedFiles.length} files are not supported file types.`
+      );
+      
+      // Filter out unsupported files
+      const validTypeFiles = selectedFiles.filter(file => 
+        ACCEPTED_FILE_TYPES.includes(file.type) || 
+        ACCEPTED_FILE_TYPES.some(type => file.name.toLowerCase().endsWith(type.split('/')[1]))
+      );
+      
+      if (validTypeFiles.length === 0) return;
+      
+      selectedFiles = validTypeFiles;
+    }
+
     // Check for files exceeding size limit
     const oversizedFiles = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
@@ -103,8 +154,8 @@ export default function PiperFileUpload() {
       if (validSizeFiles.length === 0) return;
       
       selectedFiles = validSizeFiles;
-    } else {
-      // Clear any previous error related to file size
+    } else if (!unsupportedFiles.length) {
+      // Clear any previous error related to file size or type
       setUploadError(null);
     }
 
@@ -299,7 +350,14 @@ export default function PiperFileUpload() {
             onDrop={handleDrop}
             onClick={handleBrowseClick}
           >
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden" 
+              accept={ACCEPTED_FILE_EXTENSIONS}
+              multiple 
+            />
 
             <motion.div
               initial={{ scale: 1 }}

@@ -1,6 +1,6 @@
 
-import PiperChat from "@/components/PiperChat"
-import PiperFileUpload from "@/components/PiperFileUpload"
+import PiperChat from "@/components/piper/PiperChat"
+import PiperFileUpload from "@/components/piper/PiperFileUpload"
 
 const page = () => {
   return (

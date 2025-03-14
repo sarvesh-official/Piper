@@ -1,4 +1,4 @@
-import PiperChat from '@/components/PiperChat'
+import PiperChat from '@/components/piper/PiperChat'
 
 const page = () => {
   return (

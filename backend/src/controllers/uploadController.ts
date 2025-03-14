@@ -79,6 +79,9 @@ export const uploadFilesAndExtractText = async (
     await chat.save();
     console.log(`Chat created with ${processedFiles.length} files, each with extracted text`);
 
+    // Array to collect any processing errors
+    const processingErrors: string[] = [];
+    
     // Store embeddings and update MongoDB
     await Promise.all(
       processedFiles.map(async ({ extractedText, fileKey, fileName }, index) => {
@@ -87,38 +90,82 @@ export const uploadFilesAndExtractText = async (
             const textByteSize = Buffer.byteLength(extractedText, 'utf-8');
             console.log(`Processing text for ${fileName}, size: ${textByteSize} bytes`);
             
-            // Fix: The issue is here - embeddings is number[][] but we need to pass it to storeChunkedEmbeddings correctly
-            const embeddings = await generateEmbeddings(extractedText);
-            const baseEmbeddingId = `${chat.chatId}-${fileKey}`;
-            
-            // Process embeddings and store them, whether single or multiple chunks
-            const embeddingIds = await storeChunkedEmbeddings(
-              baseEmbeddingId,
-              embeddings, // Pass the full array of embeddings (each one is a number[])
-              {
-                userId,
-                chatId: chat.chatId,
-                fileName: fileName,
-                extractedText: extractedText
+            // Check if the text is too large
+            if (textByteSize > 30000) {
+              console.log(`Text is large (${textByteSize} bytes), chunking before embedding generation`);
+              
+              // Chunk the text into smaller pieces (around 25KB each to stay well below the 36KB limit)
+              const textChunks = chunkText(extractedText, 25000);
+              console.log(`Split into ${textChunks.length} chunks for processing`);
+              
+              const allEmbeddings: number[][] = [];
+              
+              // Process each chunk and collect embeddings
+              for (let i = 0; i < textChunks.length; i++) {
+                try {
+                  const chunkEmbeddings = await generateEmbeddings(textChunks[i]);
+                  allEmbeddings.push(...chunkEmbeddings);
+                } catch (chunkError: any) {
+                  console.error(`Error processing chunk ${i+1}/${textChunks.length}:`, chunkError.message);
+                }
               }
-            );
-            
-            // If we have multiple embeddings, store as array, otherwise store as single string
-            const idToStore = embeddingIds.length > 1 ? embeddingIds : embeddingIds[0];
-            
-            // Update MongoDB with embedding ID(s)
-            await updateFileWithEmbeddingId(chat.chatId, fileKey, idToStore);
-            
-            if (embeddingIds.length > 1) {
-              console.log(`Chunked embeddings stored for: ${fileKey} (${embeddingIds.length} chunks)`);
+              
+              if (allEmbeddings.length === 0) {
+                throw new Error("Failed to generate any embeddings from text chunks");
+              }
+              
+              const baseEmbeddingId = `${chat.chatId}-${fileKey}`;
+              
+              // Store all collected embeddings
+              const embeddingIds = await storeChunkedEmbeddings(
+                baseEmbeddingId,
+                allEmbeddings,
+                {
+                  userId,
+                  chatId: chat.chatId,
+                  fileName: fileName,
+                  extractedText: extractedText
+                }
+              );
+              
+              // Update MongoDB with embedding ID(s)
+              const idToStore = embeddingIds.length > 1 ? embeddingIds : embeddingIds[0];
+              await updateFileWithEmbeddingId(chat.chatId, fileKey, idToStore);
+              
+              console.log(`Processed ${allEmbeddings.length} embeddings for ${fileName}`);
             } else {
-              console.log(`Embedding stored and updated for: ${fileKey} with ${extractedText.length} chars of text`);
+              // Original code for smaller files
+              const embeddings = await generateEmbeddings(extractedText);
+              const baseEmbeddingId = `${chat.chatId}-${fileKey}`;
+              
+              const embeddingIds = await storeChunkedEmbeddings(
+                baseEmbeddingId,
+                embeddings,
+                {
+                  userId,
+                  chatId: chat.chatId,
+                  fileName: fileName,
+                  extractedText: extractedText
+                }
+              );
+              
+              const idToStore = embeddingIds.length > 1 ? embeddingIds : embeddingIds[0];
+              await updateFileWithEmbeddingId(chat.chatId, fileKey, idToStore);
+              
+              if (embeddingIds.length > 1) {
+                console.log(`Chunked embeddings stored for: ${fileKey} (${embeddingIds.length} chunks)`);
+              } else {
+                console.log(`Embedding stored and updated for: ${fileKey} with ${extractedText.length} chars of text`);
+              }
             }
-          } catch (embeddingError) {
-            console.error("Error generating or storing embeddings:", embeddingError);
+          } catch (embeddingError: any) {
+            const errorMessage = `Error processing ${fileName}: ${embeddingError.message}`;
+            console.error(errorMessage);
+            processingErrors.push(errorMessage);
           }
         } else {
           console.warn(`No extracted text available for ${fileName}, skipping embedding generation`);
+          processingErrors.push(`Could not extract text from ${fileName}`);
         }
       })
     );
@@ -129,11 +176,17 @@ export const uploadFilesAndExtractText = async (
         fileName,
         fileUrl,
       })),
-      message: "Files uploaded and embeddings stored successfully",
+      message: processingErrors.length > 0 
+        ? "Files uploaded but some embedding processing issues occurred" 
+        : "Files uploaded and embeddings stored successfully",
+      processingErrors: processingErrors.length > 0 ? processingErrors : undefined,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing files:", error);
-    res.status(500).json({ error: "Failed to upload files and create chat" });
+    res.status(500).json({ 
+      error: "Failed to upload files and create chat", 
+      details: error.message 
+    });
   }
 };
 
@@ -175,3 +228,49 @@ const extractTextFromFile = async (
     return "";
   }
 };
+
+// Function to chunk text into smaller pieces
+function chunkText(text: string, maxBytes: number): string[] {
+  const chunks: string[] = [];
+  let currentChunk = "";
+  
+  // Split by paragraphs or sentences to maintain context
+  const paragraphs = text.split(/\n\s*\n/);
+  
+  for (const paragraph of paragraphs) {
+    // If adding this paragraph would exceed the limit, store current chunk and start a new one
+    if (Buffer.byteLength(currentChunk + paragraph, 'utf-8') > maxBytes && currentChunk) {
+      chunks.push(currentChunk);
+      currentChunk = paragraph;
+    } else {
+      // Add paragraph to current chunk with a newline if needed
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+    }
+    
+    // Check if current chunk is large enough to split
+    while (Buffer.byteLength(currentChunk, 'utf-8') > maxBytes) {
+      // If a single paragraph is too large, split by sentences
+      const sentences = currentChunk.split(/(?<=[.!?])\s+/);
+      currentChunk = "";
+      let tempChunk = "";
+      
+      for (const sentence of sentences) {
+        if (Buffer.byteLength(tempChunk + sentence, 'utf-8') > maxBytes && tempChunk) {
+          chunks.push(tempChunk);
+          tempChunk = sentence;
+        } else {
+          tempChunk += (tempChunk ? ' ' : '') + sentence;
+        }
+      }
+      
+      currentChunk = tempChunk;
+    }
+  }
+  
+  // Add the final chunk if not empty
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+  
+  return chunks;
+}
