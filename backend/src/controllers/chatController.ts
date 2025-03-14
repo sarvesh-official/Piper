@@ -137,21 +137,30 @@ export const deleteChat = async (req: Request, res: Response) => {
       return;
     }
 
-    // Extract file keys from the deleted chat
+    // Extract valid file keys from the deleted chat
     const fileKeys = deletedChat.files && Array.isArray(deletedChat.files) 
-      ? deletedChat.files.map(file => file.fileKey) 
+      ? deletedChat.files
+          .filter(file => file && file.fileKey) // Ensure file and fileKey exist
+          .map(file => file.fileKey as string)
       : [];
     
     let resourcesDeleted = true;
     
     try {
       // Delete files from S3
-      // if (fileKeys.length > 0) {
-      //   await deleteFilesFromS3(fileKeys.filter((key): key is string => !!key));
-      // }
+      if (fileKeys.length > 0) {
+        console.log(`Attempting to delete ${fileKeys.length} files from S3:`, fileKeys);
+        await deleteFilesFromS3(fileKeys);
+        console.log(`Successfully deleted uploaded files of chat ${chatId}`);
+      } else {
+        console.log("No files to delete from S3");
+      }
       
       // Delete embeddings from Pinecone
-      // await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));
+      if (fileKeys.length > 0) {
+        await deleteEmbeddingsFromPinecone(userId, chatId, fileKeys);
+        console.log(`Successfully deleted vectors for chat ${chatId}`);
+      }
       
       console.log(`Successfully deleted resources for chat ${chatId}`);
     } catch (deleteError) {
