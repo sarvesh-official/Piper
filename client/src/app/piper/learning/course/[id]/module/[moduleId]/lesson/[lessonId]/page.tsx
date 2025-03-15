@@ -1,394 +1,383 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, Code, Check, Play } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, AlertTriangle, BookOpen, Check, HelpCircle, Code, Play, Copy, Check as CheckIcon } from 'lucide-react';
+import courseApi, { Course, Lesson } from '@/app/api/course/api';
+import { toast } from 'react-toastify';
+import CourseQuiz from '@/components/piper/CourseQuiz';
 
-type LessonType = 'content' | 'quiz' | 'exercise';
-
-interface Lesson {
-  id: string;
-  title: string;
-  duration: string;
-  type: LessonType;
-  completed: boolean;
-  content?: string; // Added content field for lessons
-}
-
-interface Module {
-  id: string;
-  title: string;
-  description: string;
-  lessons: Lesson[];
-}
-
-interface CourseDetail {
-  id: string;
-  title: string;
-  description: string;
-  progress?: number;
-  status: ('active' | 'bookmarked' | 'completed')[];
-  content?: string;
-  modules: Module[];
-}
-
-// Mock lesson content data - in a real application, this would come from an API
-const LESSON_CONTENT: Record<string, string> = {
-  '1': 'This is an introduction to web development. Web development is the process of building and maintaining websites. It includes aspects such as web design, web publishing, web programming, and database management.',
-  '2': 'Core concepts in web development include HTML for structure, CSS for styling, and JavaScript for interactivity. These three languages are the backbone of most websites.',
-  '3': 'This is a quiz to test your knowledge on the fundamentals of web development.',
-  '4': 'In practical applications, we use various frameworks and libraries to make development faster and more efficient. Popular frameworks include React, Angular, and Vue.',
-  '5': 'Complete this hands-on exercise to practice the concepts learned.',
-  '6': 'Advanced techniques include performance optimization, accessibility, and responsive design.',
-  '7': 'For your final project, you will build a complete website from scratch using all the concepts learned in this course.',
-  '8': 'The final assessment will test your knowledge of all concepts covered in this course.',
+// Custom toast configuration
+const localCustomToast = {
+  success: (message: string) => {
+    toast.success(message, {
+      position: "bottom-right",
+      autoClose: 2000,
+      style: {
+        background: document.documentElement.classList.contains('dark') ? '#020617' : '#ffffff', // bg-piper-cyan : bg-piper-blue
+        color: document.documentElement.classList.contains('dark') ? '#22d3ee' : '#1868F2', // text-piper-darkblue : text-primary
+        fontWeight: 500,
+      }
+    });
+  },
+  error: (message: string) => {
+    toast.error(message, {
+      position: "bottom-right",
+      autoClose: 3000
+    });
+  }
 };
 
-// Array of all available courses (same as in the course page)
-const COURSES: CourseDetail[] = [
-  {
-    id: '1',
-    title: 'Introduction to Web Development',
-    description: 'Learn the fundamentals of HTML, CSS, and JavaScript to build modern websites.',
-    progress: 45,
-    status: ['active'],
-    content: 'This course covers various web development topics and concepts...',
-    modules: [
-      {
-        id: 'mod1',
-        title: 'Fundamentals',
-        description: 'Learn the basic concepts and get started',
-        lessons: [
-          { id: '1', title: 'Introduction', duration: '15 min', type: 'content', completed: true },
-          { id: '2', title: 'Core Concepts', duration: '45 min', type: 'content', completed: true },
-          { id: '3', title: 'Knowledge Check', duration: '10 min', type: 'quiz', completed: false }
-        ]
-      },
-      {
-        id: 'mod2',
-        title: 'Intermediate Skills',
-        description: 'Build upon the basics with more advanced topics',
-        lessons: [
-          { id: '4', title: 'Practical Applications', duration: '30 min', type: 'content', completed: false },
-          { id: '5', title: 'Hands-on Exercise', duration: '20 min', type: 'exercise', completed: false }
-        ]
-      },
-      {
-        id: 'mod3',
-        title: 'Advanced Topics',
-        description: 'Master complex techniques and implementations',
-        lessons: [
-          { id: '6', title: 'Advanced Techniques', duration: '60 min', type: 'content', completed: false },
-          { id: '7', title: 'Final Project', duration: '120 min', type: 'exercise', completed: false },
-          { id: '8', title: 'Final Assessment', duration: '30 min', type: 'quiz', completed: false }
-        ]
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Advanced JavaScript',
-    description: 'Deepen your JavaScript knowledge with advanced patterns and practices.',
-    progress: 25,
-    status: ['bookmarked'],
-    content: 'This course explores advanced JavaScript concepts...',
-    modules: [
-      {
-        id: 'mod1',
-        title: 'Modern JavaScript',
-        description: 'ES6+ features and modern syntax',
-        lessons: [
-          { id: '1', title: 'Arrow Functions', duration: '20 min', type: 'content', completed: true },
-          { id: '2', title: 'Destructuring', duration: '25 min', type: 'content', completed: false },
-          { id: '3', title: 'Practice Quiz', duration: '15 min', type: 'quiz', completed: false }
-        ]
-      },
-      {
-        id: 'mod2',
-        title: 'Async Programming',
-        description: 'Working with promises and async/await',
-        lessons: [
-          { id: '4', title: 'Promises', duration: '40 min', type: 'content', completed: false },
-          { id: '5', title: 'Async/Await', duration: '35 min', type: 'content', completed: false },
-          { id: '6', title: 'Coding Challenge', duration: '45 min', type: 'exercise', completed: false }
-        ]
-      }
-    ]
-  }
-];
+// Improved markdown formatter with better syntax highlighting
+const formatMarkdown = (text: string) => {
+  if (!text) return '';
+  
+  return text
+    // Code blocks - already handled separately, but handle inline code
+    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-sm">$1</code>')
+    
+    // Headers with proper styling
+    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold my-4 text-gray-900 dark:text-white">$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold my-5 text-gray-900 dark:text-white">$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold my-6 text-gray-900 dark:text-white">$1</h1>')
+    
+    // Bold text with highlighting
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>')
+    
+    // Italic text
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    
+    // Lists with proper styling
+    .replace(/^\s*\d+\.\s+(.*$)/gm, '<li class="ml-6 list-decimal mb-1 text-gray-800 dark:text-gray-200">$1</li>')
+    .replace(/^\s*\-\s+(.*$)/gm, '<li class="ml-6 list-disc mb-1 text-gray-800 dark:text-gray-200">$1</li>')
+    
+    // Blockquotes
+    .replace(/^\>\s+(.*$)/gm, '<blockquote class="pl-4 italic border-l-4 border-gray-300 dark:border-gray-600 my-3 text-gray-700 dark:text-gray-300">$1</blockquote>')
+    
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-piper-blue dark:text-piper-cyan hover:underline">$1</a>')
+    
+    // Paragraphs
+    .replace(/\n\s*\n/g, '</p><p class="mb-4 text-gray-800 dark:text-gray-200">')
+    
+    // Wrap in paragraph if not already
+    .replace(/^(.+)$/, '<p class="mb-4 text-gray-800 dark:text-gray-200">$1</p>');
+};
+
+// Add utility function for rendering code blocks with syntax highlighting
+const renderContentWithCodeBlocks = (content: string) => {
+  if (!content) return null;
+  
+  // Split content by code blocks
+  const parts = content.split(/(```[\s\S]*?```)/g);
+  
+  return parts.map((part, index) => {
+    if (part.startsWith('```') && part.endsWith('```')) {
+      const code = part.slice(3, -3).trim();
+      return (
+        <pre key={index} className="bg-gray-800 text-white p-4 rounded-md overflow-auto">
+          <code>{code}</code>
+        </pre>
+      );
+    }
+    return <div key={index} dangerouslySetInnerHTML={{ __html: formatMarkdown(part) }} />;
+  });
+};
 
 export default function LessonPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params.id as string;
-  const moduleId = params.moduleId as string;
-  const lessonId = params.lessonId as string;
+  const moduleId = parseInt(params.moduleId as string);
+  const lessonId = parseInt(params.lessonId as string);
   
-  const [course, setCourse] = useState<CourseDetail | null>(null);
-  const [module, setModule] = useState<Module | null>(null);
-  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [markingComplete, setMarkingComplete] = useState(false);
+
   useEffect(() => {
-    setLoading(true);
-    
-    // Find the course with the matching ID
-    const foundCourse = COURSES.find(c => c.id === courseId);
-    
-    if (foundCourse) {
-      setCourse(foundCourse);
-      
-      // Find the module with the matching ID
-      const foundModule = foundCourse.modules.find(m => m.id === moduleId);
-      if (foundModule) {
-        setModule(foundModule);
+    const fetchCourseData = async () => {
+      setLoading(true);
+      try {
+        const courseData = await courseApi.getCourse(courseId);
         
-        // Find the lesson with the matching ID
-        const foundLesson = foundModule.lessons.find(l => l.id === lessonId);
-        if (foundLesson) {
-          // Add content to the lesson from our mock data
-          setLesson({
-            ...foundLesson,
-            content: LESSON_CONTENT[foundLesson.id] || 'No content available for this lesson.'
-          });
+        // Set default fields for backward compatibility
+        const normalizedCourse = {
+          ...courseData,
+          status: courseData.status || ['active'],
+          progress: courseData.progress || 0
+        };
+        
+        setCourse(normalizedCourse);
+        
+        // Find the specific module and lesson
+        const module = normalizedCourse.modules.find(m => m.id === moduleId);
+        if (!module || lessonId < 0 || lessonId >= module.lessons.length) {
+          throw new Error('Lesson not found');
         }
+        
+        setCurrentLesson({
+          ...module.lessons[lessonId],
+          completed: module.lessons[lessonId].completed || false
+        });
+        
+        // Mark the lesson as viewed after a delay (only if not already completed)
+        if (!module.lessons[lessonId].completed) {
+          const timer = setTimeout(() => {
+            markLessonAsComplete();
+          }, 10000); // Mark as complete after 10 seconds of viewing
+          
+          return () => clearTimeout(timer);
+        }
+        
+      } catch (error: any) {
+        console.error('Error fetching lesson:', error);
+        setError(error.message || 'Failed to load lesson');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
     
-    setLoading(false);
+    fetchCourseData();
   }, [courseId, moduleId, lessonId]);
 
-  const navigateToModule = () => {
-    router.push(`/piper/learning/course/${courseId}/module/${moduleId}`);
-  };
-
-  // Function to get the next and previous lessons
-  const getAdjacentLessons = () => {
-    if (!module) return { prevLesson: null, nextLesson: null };
+  const markLessonAsComplete = async () => {
+    if (markingComplete || !course || !currentLesson) return;
     
-    const currentLessonIndex = module.lessons.findIndex(l => l.id === lessonId);
-    const prevLesson = currentLessonIndex > 0 ? module.lessons[currentLessonIndex - 1] : null;
-    const nextLesson = currentLessonIndex < module.lessons.length - 1 ? module.lessons[currentLessonIndex + 1] : null;
-    
-    return { prevLesson, nextLesson };
-  };
-
-  const { prevLesson, nextLesson } = getAdjacentLessons();
-
-  const navigateToLesson = (id: string) => {
-    router.push(`/piper/learning/course/${courseId}/module/${moduleId}/lesson/${id}`);
-  };
-
-  const markAsCompleted = () => {
-    // In a real application, you would call an API to update the lesson status
-    // Here we're just showing how the UI would change
-    if (lesson) {
-      setLesson({
-        ...lesson,
-        completed: true
+    setMarkingComplete(true);
+    try {
+      // Toggle the completion status
+      const newStatus = !currentLesson.completed;
+      
+      const updatedCourse = await courseApi.updateLessonCompletion(
+        courseId,
+        moduleId,
+        lessonId,
+        newStatus
+      );
+      
+      setCourse(updatedCourse);
+      setCurrentLesson({
+        ...currentLesson,
+        completed: newStatus
       });
+      
+      // Use custom toast with theme-appropriate styling
+      localCustomToast.success(newStatus ? "Lesson marked as completed" : "Lesson marked as incomplete");
+    } catch (error) {
+      console.error("Failed to update lesson status", error);
+      localCustomToast.error("Failed to update lesson status");
+    } finally {
+      setMarkingComplete(false);
+    }
+  };
+
+  const navigateToNextLesson = () => {
+    if (!course) return;
+    
+    const currentModule = course.modules.find(m => m.id === moduleId);
+    if (!currentModule) return;
+    
+    // If there are more lessons in this module
+    if (lessonId < currentModule.lessons.length - 1) {
+      router.push(`/piper/learning/course/${courseId}/module/${moduleId}/lesson/${lessonId + 1}`);
+    } else {
+      // Find the next module
+      const currentModuleIndex = course.modules.findIndex(m => m.id === moduleId);
+      if (currentModuleIndex < course.modules.length - 1) {
+        const nextModule = course.modules[currentModuleIndex + 1];
+        router.push(`/piper/learning/course/${courseId}/module/${nextModule.id}/lesson/0`);
+      }
+    }
+  };
+
+  const navigateToPreviousLesson = () => {
+    if (!course) return;
+    
+    // If not the first lesson in module
+    if (lessonId > 0) {
+      router.push(`/piper/learning/course/${courseId}/module/${moduleId}/lesson/${lessonId - 1}`);
+    } else {
+      // Find the previous module
+      const currentModuleIndex = course.modules.findIndex(m => m.id === moduleId);
+      if (currentModuleIndex > 0) {
+        const prevModule = course.modules[currentModuleIndex - 1];
+        const lastLessonIndex = prevModule.lessons.length - 1;
+        router.push(`/piper/learning/course/${courseId}/module/${prevModule.id}/lesson/${lastLessonIndex}`);
+      }
+    }
+  };
+
+  const navigateBack = () => {
+    router.push(`/piper/learning/course/${courseId}`);
+  };
+
+  // Get the appropriate icon and background based on lesson type
+  const getLessonTypeInfo = () => {
+    if (!currentLesson) return { icon: <BookOpen size={18} />, bg: "bg-blue-100 dark:bg-blue-900" };
+    
+    switch (currentLesson.type) {
+      case 'quiz':
+        return { 
+          icon: <HelpCircle size={18} className="text-purple-600 dark:text-purple-300" />,
+          bg: "bg-purple-100 dark:bg-purple-900"
+        };
+      case 'code':
+        return { 
+          icon: <Code size={18} className="text-amber-600 dark:text-amber-300" />,
+          bg: "bg-amber-100 dark:bg-amber-900"
+        };
+      default:
+        return { 
+          icon: <BookOpen size={18} className="text-blue-600 dark:text-blue-300" />,
+          bg: "bg-blue-100 dark:bg-blue-900"
+        };
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-piper-blue"></div>
+        <Loader2 className="h-12 w-12 animate-spin text-piper-blue dark:text-piper-cyan" />
       </div>
     );
   }
 
-  if (!course || !module || !lesson) {
+  if (error || !currentLesson || !course) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
-          <p className="text-lg text-gray-500 dark:text-gray-400">Lesson not found</p>
+          <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <p className="text-lg text-gray-500 dark:text-gray-400">{error || 'Lesson not found'}</p>
           <button 
-            onClick={() => router.back()}
+            onClick={navigateBack}
             className="mt-4 px-4 py-2 bg-piper-blue text-white rounded-lg hover:bg-blue-600"
           >
-            Go Back
+            Back to Course
           </button>
         </div>
       </div>
     );
   }
 
-  // Determine lesson icon and background color based on lesson type
-  const getLessonIcon = () => {
-    switch (lesson.type) {
-      case 'quiz':
-        return <HelpCircle size={20} />;
-      case 'exercise':
-        return <Code size={20} />;
-      default:
-        return <BookOpen size={20} />;
-    }
-  };
+  // Get current module for navigation
+  const currentModule = course?.modules.find(m => m.id === moduleId);
+  const isLastLesson = currentModule && lessonId === currentModule.lessons.length - 1;
+  const isLastModule = course && currentModule && 
+    course.modules.indexOf(currentModule) === course.modules.length - 1;
+  const isFirstLesson = lessonId === 0;
+  const isFirstModule = course && currentModule && 
+    course.modules.indexOf(currentModule) === 0;
 
-  let iconBg = "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200";
-  if (lesson.type === 'quiz') {
-    iconBg = "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200";
-  } else if (lesson.type === 'exercise') {
-    iconBg = "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200";
-  }
+  const { icon, bg } = getLessonTypeInfo();
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button 
-        onClick={navigateToModule}
-        className="flex items-center text-piper-blue dark:text-piper-cyan mb-6"
-      >
-        <ArrowLeft size={18} className="mr-2" />
-        Back to Module
-      </button>
-
-      {/* Lesson Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 mb-6">
-        <div className="flex items-center mb-4">
-          <div className={`${iconBg} p-2.5 rounded-full mr-3`}>
-            {getLessonIcon()}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{lesson.title}</h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              {module.title} • {lesson.duration}
-            </p>
-          </div>
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+      {/* Navigation breadcrumb - Improved responsive layout */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+        <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+          <button 
+            onClick={() => router.push(`/piper/learning/course/${courseId}`)}
+            className="flex items-center text-piper-blue dark:text-piper-cyan hover:underline"
+          >
+            <ArrowLeft size={14} className="mr-1 sm:mr-2" />
+            Back to Course
+          </button>
+          <span className="mx-1 sm:mx-2">•</span>
+          <span className="hidden sm:inline">{currentModule?.title}</span>
+          <span className="hidden sm:inline mx-2">•</span>
+          <span className="font-medium text-gray-900 dark:text-white">
+            {lessonId + 1}/{currentModule?.lessons.length}
+          </span>
         </div>
         
-        {/* Lesson Content */}
-        <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-100 dark:border-gray-700 mb-6">
-          {/* Different content based on lesson type */}
-          {lesson.type === 'content' && (
-            <div className="prose dark:prose-invert max-w-none">
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{lesson.content}</p>
-            </div>
-          )}
-          
-          {lesson.type === 'quiz' && (
-            <div>
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-6">{lesson.content}</p>
-              <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-800 dark:text-purple-300 mb-2">Quiz Questions</h3>
-                <p className="text-purple-700 dark:text-purple-300">Answer the following questions to test your knowledge.</p>
-                {/* Quiz questions would go here in a real implementation */}
-                <div className="mt-4 p-3 border border-purple-200 dark:border-purple-800 rounded-lg">
-                  <p className="font-medium text-purple-800 dark:text-purple-300">Sample Question: What is HTML?</p>
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center">
-                      <input type="radio" id="q1a1" name="q1" className="mr-2" />
-                      <label htmlFor="q1a1" className="text-gray-700 dark:text-gray-300">HyperText Markup Language</label>
-                    </div>
-                    <div className="flex items-center">
-                      <input type="radio" id="q1a2" name="q1" className="mr-2" />
-                      <label htmlFor="q1a2" className="text-gray-700 dark:text-gray-300">High-Level Text Management Language</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {lesson.type === 'exercise' && (
-            <div>
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-6">{lesson.content}</p>
-              <div className="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg">
-                <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">Exercise Instructions</h3>
-                <p className="text-amber-700 dark:text-amber-300">Follow these steps to complete the exercise.</p>
-                <div className="mt-4 p-3 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
-                    <li>Create a new HTML file</li>
-                    <li>Add basic HTML structure</li>
-                    <li>Implement the specified features</li>
-                    <li>Submit your work for review</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Lesson Actions */}
-        <div className="flex flex-wrap justify-between items-center gap-4">
-          <div className="flex flex-wrap gap-2">
-            {prevLesson && (
-              <button
-                onClick={() => navigateToLesson(prevLesson.id)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center"
-              >
-                <ArrowLeft size={16} className="mr-2" />
-                Previous
-              </button>
-            )}
-            
-            {nextLesson && (
-              <button
-                onClick={() => navigateToLesson(nextLesson.id)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center"
-              >
-                Next
-                <ArrowRight size={16} className="ml-2" />
-              </button>
-            )}
-          </div>
-          
-          {lesson.completed ? (
-            <div className="flex items-center text-green-600 dark:text-green-400">
-              <Check size={18} className="mr-2" />
-              Completed
-            </div>
-          ) : (
-            <button
-              onClick={markAsCompleted}
-              className="px-4 py-2 bg-piper-blue text-white rounded-md hover:bg-blue-600 transition-colors flex items-center"
-            >
-              <Check size={16} className="mr-2" />
-              Mark as Completed
-            </button>
-          )}
-        </div>
-      </div>
-      
-      {/* Module Progress */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Module Progress</h2>
-        
-        <div className="space-y-3">
-          {module.lessons.map((moduleLesson) => (
-            <div 
-              key={moduleLesson.id}
-              className={`flex items-center p-3 rounded-md cursor-pointer ${
-                moduleLesson.id === lessonId 
-                  ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-piper-blue dark:border-piper-cyan' 
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+        {currentLesson && (
+          <button 
+            onClick={markLessonAsComplete}
+            disabled={markingComplete}
+            className={`flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm
+              ${currentLesson.completed
+                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
-              onClick={() => navigateToLesson(moduleLesson.id)}
-            >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                moduleLesson.completed 
-                  ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400' 
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-              }`}>
-                {moduleLesson.completed ? (
-                  <Check size={16} />
+          >
+            {markingComplete ? (
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+            ) : (
+              <Check className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${currentLesson.completed ? 'text-green-600 dark:text-green-400' : ''}`} />
+            )}
+            {currentLesson.completed ? 
+              <span className="hidden sm:inline">Mark as Incomplete</span> : 
+              <span className="hidden sm:inline">Mark as Complete</span>}
+            {currentLesson.completed ? 
+              <span className="inline sm:hidden">Incomplete</span> : 
+              <span className="inline sm:hidden">Complete</span>}
+          </button>
+        )}
+      </div>
+
+      {/* Lesson title and content - Improved responsive layout */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden mb-4 sm:mb-6">
+        <div className="p-3 sm:p-6">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-0 mb-3 sm:mb-4">
+            <div className={`p-1.5 sm:p-2 ${bg} rounded-full mr-2 sm:mr-3 flex-shrink-0`}>
+              {icon}
+            </div>
+            <h1 className="text-base sm:text-xl font-bold line-clamp-2 flex-1">{currentLesson?.title}</h1>
+          </div>
+
+          <div className="prose prose-blue dark:prose-invert max-w-none">
+            {currentLesson?.type === 'quiz' ? (
+              // Render quiz component for quiz type lessons
+              <CourseQuiz 
+                quizContent={currentLesson.content || ''}
+                courseId={courseId}
+              />
+            ) : (
+              // Use custom rendering logic for content with code blocks
+              <div className="markdown-content">
+                {currentLesson?.content ? (
+                  renderContentWithCodeBlocks(currentLesson.content)
                 ) : (
-                  <Play size={16} />
+                  <p>No content available for this lesson.</p>
                 )}
               </div>
-              <div>
-                <p className={`font-medium ${
-                  moduleLesson.id === lessonId 
-                    ? 'text-piper-blue dark:text-piper-cyan' 
-                    : 'text-gray-800 dark:text-gray-200'
-                }`}>
-                  {moduleLesson.title}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{moduleLesson.duration}</p>
-              </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Navigation buttons - Updated for better responsiveness */}
+      <div className="flex justify-between gap-2">
+        <button
+          onClick={navigateToPreviousLesson}
+          className={`px-3 sm:px-4 py-1.5 sm:py-2 flex items-center rounded-lg text-xs sm:text-sm ${
+            isFirstLesson && isFirstModule
+              ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 cursor-not-allowed'
+              : 'bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue hover:bg-blue-600 dark:hover:bg-cyan-400'
+          }`}
+          disabled={isFirstLesson && isFirstModule}
+        >
+          <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Previous Lesson</span>
+          <span className="inline sm:hidden">Previous</span>
+        </button>
+
+        <button
+          onClick={navigateToNextLesson}
+          className={`px-3 sm:px-4 py-1.5 sm:py-2 flex items-center rounded-lg text-xs sm:text-sm ${
+            isLastLesson && isLastModule
+              ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 cursor-not-allowed'
+              : 'bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue hover:bg-blue-600 dark:hover:bg-cyan-400'
+          }`}
+          disabled={isLastLesson && isLastModule}
+        >
+          <span className="hidden sm:inline">Next Lesson</span>
+          <span className="inline sm:hidden">Next</span>
+          <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+        </button>
       </div>
     </div>
   );

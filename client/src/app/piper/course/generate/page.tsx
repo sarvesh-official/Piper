@@ -1,9 +1,8 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   File,
   FileText,
@@ -21,45 +20,43 @@ import {
   Award,
   BookMarked,
   Star,
-  Loader2
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-// Module types for type safety
-type LessonType = 'lesson' | 'interactive' | 'code' | 'quiz';
-
-interface Lesson {
-  type: LessonType;
-  title: string;
-  duration: string;
-}
-
-interface Module {
-  id: number;
-  title: string;
-  lessons: Lesson[];
-}
+// Import the roadmap API
+import roadmapApi, { 
+  Roadmap,
+  RoadmapModule, 
+  RoadmapLesson 
+} from "@/app/api/roadmap/api";
+import courseApi from "@/app/api/course/api";
 
 const GenerateCourse = () => {
   const router = useRouter();
-
+  const searchParams = useSearchParams();
+  
   // Course generator state
   const [courseComplexity, setCourseComplexity] = useState(50);
   const [courseDuration, setCourseDuration] = useState(60);
   const [interactivityLevel, setInteractivityLevel] = useState(70);
   const [courseTitle, setCourseTitle] = useState(
-    "Introduction to Quantum Computing"
+    ""
   );
   
   // Options state
   const [includeQuizzes, setIncludeQuizzes] = useState(true);
-  const [includeInteractive, setIncludeInteractive] = useState(true);
   const [includeCode, setIncludeCode] = useState(true);
   
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
-  const [generatedCourseId, setGeneratedCourseId] = useState("");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
+  const [roadmapId, setRoadmapId] = useState("");
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   
   // Error state
   const [titleError, setTitleError] = useState("");
@@ -69,60 +66,35 @@ const GenerateCourse = () => {
   
   // Bookmark state
   const [isBookmarked, setIsBookmarked] = useState(false);
-  
-  // Module data
-  const moduleData: Module[] = [
-    {
-      id: 1,
-      title: 'Fundamentals of Quantum Mechanics',
-      lessons: [
-        { type: 'lesson', title: 'Quantum States and Superposition', duration: '20 min' },
-        { type: 'interactive', title: 'Visualizing Superposition', duration: '15 min' },
-        { type: 'code', title: 'Quantum State Representation', duration: '18 min' },
-        { type: 'quiz', title: 'Module 1 Assessment', duration: '10 min' },
-      ],
-    },
-    {
-      id: 2,
-      title: 'Quantum Bits and Information',
-      lessons: [
-        { type: 'lesson', title: 'Introduction to Qubits', duration: '18 min' },
-        { type: 'interactive', title: 'Qubit Operations', duration: '15 min' },
-        { type: 'code', title: 'Quantum Gates Implementation', duration: '20 min' },
-        { type: 'quiz', title: 'Module 2 Assessment', duration: '10 min' },
-      ],
-    },
-    {
-      id: 3,
-      title: 'Quantum Algorithms',
-      lessons: [
-        { type: 'lesson', title: 'Quantum Parallelism', duration: '22 min' },
-        { type: 'interactive', title: 'Exploring Shor\'s Algorithm', duration: '25 min' },
-        { type: 'code', title: 'Implementing Grover\'s Search', duration: '30 min' },
-        { type: 'quiz', title: 'Module 3 Assessment', duration: '15 min' },
-      ],
-    },
-    {
-      id: 4,
-      title: 'Quantum Entanglement & Teleportation',
-      lessons: [
-        { type: 'lesson', title: 'Understanding Entanglement', duration: '20 min' },
-        { type: 'interactive', title: 'Bell States Demonstration', duration: '18 min' },
-        { type: 'code', title: 'Quantum Teleportation Protocol', duration: '25 min' },
-        { type: 'quiz', title: 'Module 4 Assessment', duration: '10 min' },
-      ],
-    },
-    {
-      id: 5,
-      title: 'Quantum Computing Applications',
-      lessons: [
-        { type: 'lesson', title: 'Quantum Machine Learning', duration: '28 min' },
-        { type: 'interactive', title: 'Quantum Chemistry Simulations', duration: '22 min' },
-        { type: 'code', title: 'Quantum Error Correction', duration: '24 min' },
-        { type: 'quiz', title: 'Final Assessment', duration: '20 min' },
-      ],
-    },
-  ];
+
+  // Check if we're editing an existing roadmap
+  useEffect(() => {
+    const existingRoadmapId = searchParams.get('roadmapId');
+    if (existingRoadmapId) {
+      fetchExistingRoadmap(existingRoadmapId);
+    }
+  }, [searchParams]);
+
+  const fetchExistingRoadmap = async (roadmapId: string) => {
+    setIsGenerating(true);
+    try {
+      const roadmapData = await roadmapApi.getRoadmap(roadmapId);
+      setRoadmap(roadmapData);
+      setRoadmapId(roadmapData._id);
+      setCourseTitle(roadmapData.title);
+      setCourseComplexity(roadmapData.complexity);
+      setCourseDuration(roadmapData.duration);
+      setInteractivityLevel(roadmapData.interactivity);
+      setIncludeQuizzes(roadmapData.includeQuizzes);
+      setIncludeCode(roadmapData.includeCode);
+      setIsGenerated(true);
+    } catch (error: any) {
+      console.error("Error fetching roadmap:", error);
+      toast.error("Failed to load roadmap");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
   
   // Toggle module expansion
   const toggleModule = (moduleId: number) => {
@@ -132,7 +104,7 @@ const GenerateCourse = () => {
     }));
   };
 
-  const handleGenerateCourse = async () => {
+  const handleGenerateRoadmap = async () => {
     // Validate input
     if (!courseTitle.trim()) {
       setTitleError("Please enter a course title");
@@ -144,23 +116,70 @@ const GenerateCourse = () => {
     setIsGenerating(true);
     
     try {
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Generate roadmap first using the roadmap API - ensure this is used correctly
+      const generatedRoadmap = await roadmapApi.generateRoadmap({
+        title: courseTitle,
+        complexity: courseComplexity,
+        duration: courseDuration,
+        includeQuizzes,
+        includeCode
+      });
       
-      // Create a mock course ID - in a real app this would come from the backend
-      setGeneratedCourseId("2");
-      
+      setRoadmap(generatedRoadmap);
+      setRoadmapId(generatedRoadmap._id);
       setIsGenerated(true);
-    } catch (error) {
-      console.error("Error generating course:", error);
+      
+      toast.success("Course roadmap generated successfully!");
+    } catch (error: any) {
+      console.error("Error generating roadmap:", error);
+      toast.error(error.message || "Failed to generate course roadmap");
     } finally {
       setIsGenerating(false);
     }
   };
   
-  const handleStartLearning = () => {
-    if (generatedCourseId) {
-      router.push(`/piper/learning/course/${generatedCourseId}`);
+  const handleRegenerateRoadmap = async () => {
+    if (!roadmapId) return;
+    
+    setIsRegenerating(true);
+    
+    try {
+      const regeneratedRoadmap = await roadmapApi.regenerateRoadmap(roadmapId, {
+        title: courseTitle,
+        complexity: courseComplexity,
+        duration: courseDuration,
+        includeQuizzes,
+        includeCode
+      });
+      
+      setRoadmap(regeneratedRoadmap);
+      
+      toast.success("Course roadmap regenerated successfully!");
+    } catch (error: any) {
+      console.error("Error regenerating roadmap:", error);
+      toast.error(error.message || "Failed to regenerate course roadmap");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+  
+  const handleStartLearning = async () => {
+    if (!roadmapId) return;
+    
+    setIsCreatingCourse(true);
+    
+    try {
+      // Create detailed course from roadmap using courseApi
+      const course = await courseApi.createCourseFromRoadmap(roadmapId);
+      
+      toast.success("Full course created successfully!");
+      
+      // Navigate to the course page
+      router.push(`/piper/learning/course/${course._id}`);
+    } catch (error: any) {
+      console.error("Error creating course:", error);
+      toast.error(error.message || "Failed to create detailed course");
+      setIsCreatingCourse(false);
     }
   };
 
@@ -169,21 +188,14 @@ const GenerateCourse = () => {
     setIsBookmarked(prev => !prev);
     
     // Show toast notification
-    toast.success("Course added to bookmarks", {
-      position: "bottom-center",
-      style: {
-        background: "#333",
-        color: "#fff",
-      },
-    });
+    toast.success(isBookmarked ? "Roadmap removed from bookmarks" : "Roadmap added to bookmarks");
     
     // Here you would typically also save this to user's bookmarks in a database
   };
 
   // Render a lesson based on its type
-  const renderLesson = (lesson: Lesson) => {
+  const renderLesson = (lesson: RoadmapLesson) => {
     // Skip rendering based on user options
-    if (lesson.type === 'interactive' && !includeInteractive) return null;
     if (lesson.type === 'code' && !includeCode) return null;
     if (lesson.type === 'quiz' && !includeQuizzes) return null;
     
@@ -194,9 +206,6 @@ const GenerateCourse = () => {
     switch(lesson.type) {
       case 'lesson':
         icon = <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
-        break;
-      case 'interactive':
-        icon = <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
         break;
       case 'code':
         icon = <File className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
@@ -209,18 +218,24 @@ const GenerateCourse = () => {
     }
     
     return (
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className={iconWrapperClass}>
-            {icon}
+      <div className="flex flex-col space-y-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={iconWrapperClass}>
+              {icon}
+            </div>
+            <span className={titleClass}>
+              {lesson.type === 'code' && 'Code Example: '}
+              {lesson.title}
+            </span>
           </div>
-          <span className={titleClass}>
-            {lesson.type === 'interactive' && 'Interactive: '}
-            {lesson.type === 'code' && 'Code Example: '}
-            {lesson.title}
-          </span>
+          <span className="text-xs text-gray-500">{lesson.duration}</span>
         </div>
-        <span className="text-xs text-gray-500">{lesson.duration}</span>
+        {lesson.description && (
+          <div className="pl-10 text-xs text-gray-500 dark:text-gray-400">
+            {lesson.description}
+          </div>
+        )}
       </div>
     );
   };
@@ -234,7 +249,7 @@ const GenerateCourse = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-lg font-semibold mb-4">Generate New Course</h2>
+        <h2 className="text-lg font-semibold mb-4">Generate Course Roadmap</h2>
 
         <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
           {/* Course Generator Controls */}
@@ -264,6 +279,7 @@ const GenerateCourse = () => {
                 {titleError && <p className="mt-1 text-xs text-red-500">{titleError}</p>}
               </div>
 
+              {/* Range sliders - unchanged */}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium">
@@ -345,6 +361,7 @@ const GenerateCourse = () => {
 
               <div className="pt-2">
                 <div className="flex flex-wrap gap-2 mb-4">
+                  {/* Option toggles - update to remove interactive options */}
                   <button 
                     className={`px-3 py-1.5 rounded-full ${includeQuizzes 
                       ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' 
@@ -358,20 +375,6 @@ const GenerateCourse = () => {
                       <span className="h-3 w-3 mr-1" />
                     )}
                     Include quizzes
-                  </button>
-                  <button 
-                    className={`px-3 py-1.5 rounded-full ${includeInteractive 
-                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' 
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} 
-                      text-xs font-medium flex items-center transition-colors`}
-                    onClick={() => setIncludeInteractive(!includeInteractive)}
-                  >
-                    {includeInteractive ? (
-                      <Check className="h-3 w-3 mr-1 text-piper-blue dark:text-piper-cyan" />
-                    ) : (
-                      <span className="h-3 w-3 mr-1" />
-                    )}
-                    Interactive examples
                   </button>
                   <button 
                     className={`px-3 py-1.5 rounded-full ${includeCode 
@@ -393,18 +396,18 @@ const GenerateCourse = () => {
                   className={`w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors shadow-md hover:shadow-lg ${
                     isGenerating ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
-                  onClick={handleGenerateCourse}
+                  onClick={handleGenerateRoadmap}
                   disabled={isGenerating}
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Generating...
+                      Generating Roadmap...
                     </>
                   ) : (
                     <>
                       <BookOpen className="mr-2 h-5 w-5" />
-                      Generate Course
+                      Generate Roadmap
                     </>
                   )}
                 </button>
@@ -412,15 +415,15 @@ const GenerateCourse = () => {
             </div>
           </div>
 
-          {/* Course Preview */}
-          <div className="w-full lg:w-3/5">
+          {/* Roadmap Preview - Set fixed height */}
+          <div className="w-full lg:w-3/5 h-[480px]">
             {isGenerating ? (
               <div className="h-full flex items-center justify-center bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-8">
                 <div className="text-center">
                   <Loader2 className="h-12 w-12 animate-spin text-piper-blue dark:text-piper-cyan mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Generating Your Course</h3>
+                  <h3 className="text-lg font-medium mb-2">Generating Your Course Roadmap</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-                    Creating a personalized learning experience based on your preferences...
+                    Creating a personalized learning plan based on your preferences...
                   </p>
                 </div>
               </div>
@@ -430,9 +433,10 @@ const GenerateCourse = () => {
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                     <BookOpen className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium mb-2">Course Preview</h3>
+                  <h3 className="text-lg font-medium mb-2">Course Roadmap Preview</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-                  Provide your input and click "Generate Course" to create a personalized learning experience.</p>
+                    Provide your input and click "Generate Roadmap" to create a personalized learning plan.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -444,13 +448,13 @@ const GenerateCourse = () => {
                     </div>
                     <div>
                       <h3 className="font-medium">
-                        {courseTitle}
+                        {roadmap?.title || courseTitle}
                       </h3>
                       <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                         <Clock className="h-3.5 w-3.5 mr-1" />
                         {courseDuration < 30
                           ? "1-2 hours"
-                          : courseDuration < 70 ? "4-6 hours" : "10+ hours"} • 5 modules • Generated by Piper AI
+                          : courseDuration < 70 ? "4-6 hours" : "10+ hours"} • {roadmap?.modules.length || 0} modules • Generated by Piper AI
                       </div>
                     </div>
                   </div>
@@ -465,9 +469,19 @@ const GenerateCourse = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4">
+                  {/* Info box to explain the roadmap-to-course process */}
+                  <div className="mb-4 p-3 border border-piper-blue/20 dark:border-piper-cyan/20 bg-piper-blue/5 dark:bg-piper-cyan/5 rounded-lg">
+                    <div className="flex items-start">
+                      <AlertCircle className="h-5 w-5 text-piper-blue dark:text-piper-cyan mr-2 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        This is your course roadmap. Review the modules and lessons below. When you're ready to start learning with detailed content, click "Create Full Course".
+                      </p>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-3">
                     {/* Dynamic Module Rendering with Accordion Functionality */}
-                    {moduleData.map(module => (
+                    {roadmap?.modules.map((module) => (
                       <div 
                         key={module.id} 
                         className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
@@ -482,13 +496,13 @@ const GenerateCourse = () => {
                               Module {module.id}: {module.title}
                             </span>
                           </div>
-                         <ChevronDown className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                                expandedModules[module.id]
-                                                ? "rotate-180 text-piper-blue dark:text-piper-cyan"
-                                                : ""
-                                            }`}
-                                            size={20}
-                                          />
+                          <ChevronDown className={`ml-auto w-5 h-5 transition-transform duration-200 ${
+                            expandedModules[module.id]
+                              ? "rotate-180 text-piper-blue dark:text-piper-cyan"
+                              : ""
+                          }`}
+                          size={20}
+                        />
                         </div>
                         
                         {expandedModules[module.id] && (
@@ -496,7 +510,6 @@ const GenerateCourse = () => {
                             {module.lessons
                               .filter(lesson => {
                                 if (lesson.type === 'quiz' && !includeQuizzes) return false;
-                                if (lesson.type === 'interactive' && !includeInteractive) return false;
                                 if (lesson.type === 'code' && !includeCode) return false;
                                 return true;
                               })
@@ -511,15 +524,47 @@ const GenerateCourse = () => {
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  <div className="mt-4 flex justify-between items-center">
-                    <button 
-                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors"
-                      onClick={handleStartLearning}
-                    >
-                      <GraduationCap className="mr-2 h-4 w-4" />
-                      Start Learning
-                    </button>
+                {/* Fixed footer with actions */}
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <div className="flex justify-between items-center">
+                    <div className="space-x-2">
+                      <button 
+                        className={`inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors ${
+                          isCreatingCourse ? 'opacity-70 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleStartLearning}
+                        disabled={isCreatingCourse}
+                      >
+                        {isCreatingCourse ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating Course...
+                          </>
+                        ) : (
+                          <>
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Create Full Course
+                          </>
+                        )}
+                      </button>
+                      
+                      <button 
+                        className={`inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors ${
+                          isRegenerating ? 'opacity-70 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleRegenerateRoadmap}
+                        disabled={isRegenerating}
+                      >
+                        {isRegenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Regenerate
+                      </button>
+                    </div>
 
                     <div className="flex items-center space-x-2">
                       <button 

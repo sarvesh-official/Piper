@@ -8,13 +8,22 @@ import chatRoutes from "./routes/chatRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import quizRoutes from "./routes/quizRoutes";
 import docRoutes from "./routes/docRoutes";
+import courseRoutes from "./routes/courseRoutes";
+import roadmapRoutes from "./routes/roadmapRoutes"; // Add roadmap routes
 
 configDotenv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Updated CORS configuration to handle credentials
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(clerkMiddleware({publishableKey : process.env.CLERK_PUBLIC_KEY as string, secretKey : process.env.CLERK_SECRET_KEY as string}));
 
@@ -22,10 +31,12 @@ app.get("/dashboard", requireAuth, (req: Request, res: Response) => {
   res.json({ message: "Welcome to the dashboard!", userId: (req as any).auth.userId });
 });
 
-app.use("/api/upload",requireAuth, uploadRoutes);
+app.use("/api/upload", requireAuth, uploadRoutes);
 app.use("/api/chat", requireAuth, chatRoutes);
 app.use("/api/quiz", requireAuth, quizRoutes);
 app.use("/api/documents", requireAuth, docRoutes);
+app.use("/api/courses", requireAuth, courseRoutes);
+app.use("/api/roadmaps", requireAuth, roadmapRoutes); // Add roadmap routes
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Public API is working!" });

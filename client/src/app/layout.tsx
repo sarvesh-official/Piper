@@ -28,7 +28,7 @@ export default function RootLayout({
           <ThemeProvider>
             <SidebarProvider>
               {children}
-              <ToastContainer />
+              <ToastContainer hideProgressBar />
 
             </SidebarProvider>
           </ThemeProvider>
