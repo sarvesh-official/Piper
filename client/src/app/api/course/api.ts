@@ -40,11 +40,12 @@ export interface Course {
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
 // Helper function to create consistent fetch options
-function createFetchOptions(method: string, body?: any) {
+function createFetchOptions(method: string, token: string, body?: any) {
   return {
     method,
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
     },
     credentials: 'include' as RequestCredentials,
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -52,10 +53,10 @@ function createFetchOptions(method: string, body?: any) {
 }
 
 // Create course from a roadmap
-export async function createCourseFromRoadmap(roadmapId: string): Promise<Course> {
+export async function createCourseFromRoadmap(roadmapId: string, token: string): Promise<Course> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/courses/create`, 
-      createFetchOptions('POST', { roadmapId })
+      createFetchOptions('POST', token, { roadmapId })
     );
 
     if (!response.ok) {
@@ -71,9 +72,9 @@ export async function createCourseFromRoadmap(roadmapId: string): Promise<Course
 }
 
 // Get a course by ID
-export async function getCourse(courseId: string): Promise<Course> {
+export async function getCourse(courseId: string, token: string): Promise<Course> {
   const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, 
-    createFetchOptions('GET')
+    createFetchOptions('GET', token)
   );
 
   if (!response.ok) {
@@ -85,9 +86,9 @@ export async function getCourse(courseId: string): Promise<Course> {
 }
 
 // Get all courses for a user
-export async function getUserCourses(): Promise<Course[]> {
+export async function getUserCourses(token: string): Promise<Course[]> {
   const response = await fetch(`${API_BASE_URL}/api/courses`, 
-    createFetchOptions('GET')
+    createFetchOptions('GET', token)
   );
 
   if (!response.ok) {
@@ -103,12 +104,13 @@ export async function updateLessonCompletion(
   courseId: string,
   moduleId: number,
   lessonIndex: number,
-  completed: boolean
+  completed: boolean,
+  token: string
 ): Promise<Course> {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/courses/${courseId}/lesson-completion`,
-      createFetchOptions('PUT', { moduleId, lessonIndex, completed })
+      createFetchOptions('PUT', token, { moduleId, lessonIndex, completed })
     );
 
     if (!response.ok) {
@@ -126,12 +128,13 @@ export async function updateLessonCompletion(
 export async function updateCourseStatus(
   courseId: string, 
   status: CourseStatus, 
-  add: boolean
+  add: boolean,
+  token: string
 ): Promise<Course> {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/courses/${courseId}/status`,
-      createFetchOptions('PUT', { status, add })
+      createFetchOptions('PUT', token, { status, add })
     );
 
     if (!response.ok) {
@@ -147,11 +150,11 @@ export async function updateCourseStatus(
 }
 
 // New function to toggle course favorite status
-export async function toggleCourseFavorite(courseId: string): Promise<Course> {
+export async function toggleCourseFavorite(courseId: string, token: string): Promise<Course> {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/courses/${courseId}/favorite`,
-      createFetchOptions('PUT')
+      createFetchOptions('PUT', token)
     );
 
     if (!response.ok) {
@@ -167,11 +170,11 @@ export async function toggleCourseFavorite(courseId: string): Promise<Course> {
 }
 
 // Get filtered courses
-export async function getFilteredCourses(filter: string = ''): Promise<Course[]> {
+export async function getFilteredCourses(filter: string = '', token: string): Promise<Course[]> {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/courses?filter=${filter}`,
-      createFetchOptions('GET')
+      createFetchOptions('GET', token)
     );
 
     if (!response.ok) {

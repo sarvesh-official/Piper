@@ -5,12 +5,15 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Bookmark, Play, Check, Clock, BookOpen, HelpCircle, Code, Loader2, AlertCircle } from 'lucide-react';
 import courseApi, { Course } from '@/app/api/course/api';
 import { toast } from 'react-toastify';
+import { useAuth } from '@clerk/nextjs';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  
+  const { getToken } = useAuth();
+
+
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +23,13 @@ export default function CourseDetailPage() {
   useEffect(() => {
     const fetchCourse = async () => {
       setLoading(true);
+      const token = await getToken()
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
+      
       try {
-        const fetchedCourse = await courseApi.getCourse(id);
+        const fetchedCourse = await courseApi.getCourse(id, token);
         
         // Set default fields if they don't exist in older courses
         const normalizedCourse = {
@@ -70,11 +78,17 @@ export default function CourseDetailPage() {
   // Toggle lesson completion status
   const toggleLessonCompletion = async (moduleId: number, lessonIndex: number, currentStatus: boolean) => {
     try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
+
       const updatedCourse = await courseApi.updateLessonCompletion(
         id, 
         moduleId, 
         lessonIndex, 
-        !currentStatus
+        !currentStatus,
+        token
       );
       
       setCourse(updatedCourse);
@@ -92,12 +106,17 @@ export default function CourseDetailPage() {
     if (!course) return;
     
     const isCurrentlyBookmarked = course.status.includes('bookmarked');
-    
+    const token = await getToken()
+
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
     try {
       const updatedCourse = await courseApi.updateCourseStatus(
         id,
         'bookmarked',
-        !isCurrentlyBookmarked
+        !isCurrentlyBookmarked,
+        token
       );
       
       setCourse(updatedCourse);

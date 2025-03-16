@@ -33,6 +33,7 @@ import roadmapApi, {
   RoadmapLesson 
 } from "@/app/api/roadmap/api";
 import courseApi from "@/app/api/course/api";
+import { useAuth } from "@clerk/nextjs";
 
 const GenerateCourse = () => {
   const router = useRouter();
@@ -60,7 +61,7 @@ const GenerateCourse = () => {
   
   // Error state
   const [titleError, setTitleError] = useState("");
-  
+  const {getToken} = useAuth();
   // Module accordion state - default expanded for first module
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({ 1: true });
   
@@ -169,8 +170,13 @@ const GenerateCourse = () => {
     setIsCreatingCourse(true);
     
     try {
+
+      const token = await getToken()
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
       // Create detailed course from roadmap using courseApi
-      const course = await courseApi.createCourseFromRoadmap(roadmapId);
+      const course = await courseApi.createCourseFromRoadmap(roadmapId, token);
       
       toast.success("Full course created successfully!");
       

@@ -4,12 +4,14 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import courseApi, { Course } from "@/app/api/course/api";
 import CourseCard from "@/components/courses/CourseCard";
+import { useAuth } from "@clerk/nextjs";
 
 const Dashboard = () => {
 
   const [coursesData, setCoursesData] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const {getToken} = useAuth();
 
   // Fetch all courses
   useEffect(() => {
@@ -20,7 +22,9 @@ const Dashboard = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const courses = await courseApi.getUserCourses();
+      const token = await getToken()
+      if(!token) return;
+      const courses = await courseApi.getUserCourses(token);
       setCoursesData(courses);
       setError("");
     } catch (err: any) {
