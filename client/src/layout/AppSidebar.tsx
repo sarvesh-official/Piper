@@ -55,12 +55,9 @@ const navItems: NavItem[] = [
   },
   {
     icon: <BookOpen size={20} />,
-    name: "My Learning",
-    subItems: [
-      { name: "All Courses", path: "/piper/learning/all" },
-      { name: "Active Courses", path: "/piper/learning/active" },
-      { name: "Bookmarked Courses", path: "/piper/learning/bookmarked" } 
-    ]
+    name: "My Courses",
+    path: "/piper/my-courses"
+
   }
 ];
 

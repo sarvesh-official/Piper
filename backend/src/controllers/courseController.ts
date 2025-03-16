@@ -48,6 +48,7 @@ export const getCourse = async (req: Request, res: Response) => {
 export const getUserCourses = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).auth.userId;
+    // Fetch all courses without filtering
     const courses = await courseService.getUserCourses(userId);
     res.json(courses);
   } catch (error: any) {
@@ -114,6 +115,24 @@ export const updateCourseStatus = async (req: Request, res: Response) => {
       return 
     }
 
+    res.json(course);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const toggleCourseFavorite = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).auth.userId;
+    
+    const course = await courseService.toggleCourseFavorite(id, userId);
+    
+    if (!course) {
+      res.status(404).json({ error: 'Course not found' });
+      return;
+    }
+    
     res.json(course);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

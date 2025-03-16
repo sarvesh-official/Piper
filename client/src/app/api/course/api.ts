@@ -30,9 +30,10 @@ export interface Course {
   createdAt: string;
   updatedAt: string;
   roadmapId?: string;
-  status: CourseStatus[]; // New fields
+  status: CourseStatus[];
   progress: number;
   description?: string;
+  favorite: boolean; // Add favorite field
 }
 
 // API client functions
@@ -145,6 +146,46 @@ export async function updateCourseStatus(
   }
 }
 
+// New function to toggle course favorite status
+export async function toggleCourseFavorite(courseId: string): Promise<Course> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/courses/${courseId}/favorite`,
+      createFetchOptions('PUT')
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || 'Failed to toggle course favorite status');
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error('API error in toggleCourseFavorite:', error);
+    throw error;
+  }
+}
+
+// Get filtered courses
+export async function getFilteredCourses(filter: string = ''): Promise<Course[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/courses?filter=${filter}`,
+      createFetchOptions('GET')
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || 'Failed to fetch filtered courses');
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error('API error in getFilteredCourses:', error);
+    throw error;
+  }
+}
+
 // Export as an object - verify no generateCourse function is exported
 const courseApi = {
   createCourseFromRoadmap,
@@ -152,6 +193,8 @@ const courseApi = {
   getUserCourses,
   updateLessonCompletion, // Add new methods
   updateCourseStatus,
+  toggleCourseFavorite, // Add new method
+  getFilteredCourses, // Add the new function to the exports
 };
 
 export default courseApi;

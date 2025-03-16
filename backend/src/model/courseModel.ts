@@ -28,9 +28,10 @@ export interface ICourse extends Document {
   createdAt: Date;
   updatedAt: Date;
   roadmapId: string;
-  status: CourseStatus[]; // Array of course statuses
-  progress: number; // Overall course progress percentage
-  description?: string; // Course description for UI
+  status: CourseStatus[]; 
+  progress: number; 
+  description?: string;
+  favorite: boolean; // New field to track favorite status
 }
 
 const LessonSchema = new Schema<ILesson>({
@@ -110,6 +111,10 @@ const CourseSchema = new Schema<ICourse>({
   },
   description: {
     type: String
+  },
+  favorite: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

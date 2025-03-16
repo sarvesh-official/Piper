@@ -36,11 +36,14 @@ export class CourseService {
     // Generate a dedicated course description instead of extracting from lesson content
     const description = await this.generateCourseDescription(roadmap.title, roadmap.complexity, roadmap.modules);
     
+    // Capitalize the first letter of the course title
+    const formattedTitle = roadmap.title ? roadmap.title.charAt(0).toUpperCase() + roadmap.title.slice(1) : roadmap.title;
+    
     // Create and save the course
     const course = new Course({
       userId,
       roadmapId,
-      title: roadmap.title,
+      title: formattedTitle,
       complexity: roadmap.complexity,
       duration: roadmap.duration,
       includeQuizzes: roadmap.includeQuizzes,
@@ -61,7 +64,8 @@ export class CourseService {
     return Course.findOne({ _id: courseId, userId });
   }
   
-  async getUserCourses(userId: string): Promise<ICourse[]> {
+  async getUserCourses(userId: string, filter?: string): Promise<ICourse[]> {
+    // Return all courses for the user without any filtering
     return Course.find({ userId }).sort({ createdAt: -1 });
   }
 
@@ -348,6 +352,22 @@ export class CourseService {
       return `A comprehensive ${level}-level course covering all aspects of ${title}.`;
     }
   }
+
+  async toggleCourseFavorite(courseId: string, userId: string): Promise<ICourse | null> {
+    const course = await Course.findOne({ _id: courseId, userId });
+    
+    if (!course) {
+      return null;
+    }
+    
+    // Type-safe approach to toggle the favorite status
+    const currentFavoriteStatus = course.get('favorite') || false;
+    course.set('favorite', !currentFavoriteStatus);
+    
+    return course.save();
+  };
 }
+
+
 
 export const courseService = new CourseService();
