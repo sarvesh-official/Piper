@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Loader2, AlertTriangle, BookOpen, Check, HelpCir
 import courseApi, { Course, Lesson } from '@/app/api/course/api';
 import { toast } from 'react-toastify';
 import CourseQuiz from '@/components/piper/CourseQuiz';
+import { useAuth } from '@clerk/nextjs';
 
 // Custom toast configuration
 const localCustomToast = {
@@ -96,12 +97,17 @@ export default function LessonPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [markingComplete, setMarkingComplete] = useState(false);
+  const {getToken} = useAuth();
 
   useEffect(() => {
     const fetchCourseData = async () => {
       setLoading(true);
+      const token = await getToken()
       try {
-        const courseData = await courseApi.getCourse(courseId);
+
+        if(!token) return;
+
+        const courseData = await courseApi.getCourse(courseId, token);
         
         // Set default fields for backward compatibility
         const normalizedCourse = {
@@ -150,12 +156,15 @@ export default function LessonPage() {
     try {
       // Toggle the completion status
       const newStatus = !currentLesson.completed;
-      
+      const token = await getToken()
+      if(!token) return;
+
       const updatedCourse = await courseApi.updateLessonCompletion(
         courseId,
         moduleId,
         lessonId,
-        newStatus
+        newStatus,
+        token
       );
       
       setCourse(updatedCourse);
