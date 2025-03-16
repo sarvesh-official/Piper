@@ -53,7 +53,7 @@ const quizQuestionSchema = new mongoose_1.default.Schema({
     id: Number,
     type: {
         type: String,
-        enum: ['mcq', 'true_false'],
+        enum: ['mcq', 'true/false', 'true_false'], // Added 'true_false' to the enum'true_false'], // Added 'true_false' to the type
         required: true
     },
     question: String,
@@ -63,6 +63,16 @@ const quizQuestionSchema = new mongoose_1.default.Schema({
         required: true
     },
     explanation: String
+});
+const savedQuizSchema = new mongoose_1.default.Schema({
+    fileName: { type: String, required: true },
+    fileUrl: { type: String, required: true },
+    fileKey: { type: String, required: true },
+    quizTitle: { type: String, required: true },
+    savedAt: { type: Date, default: Date.now },
+    isSubmitted: { type: Boolean, default: false },
+    score: { type: Number },
+    totalQuestions: { type: Number }
 });
 const quizSchema = new mongoose_1.default.Schema({
     questions: [quizQuestionSchema],
@@ -78,7 +88,8 @@ const quizSchema = new mongoose_1.default.Schema({
             trueFalse: Boolean
         },
         customPrompt: String
-    }
+    },
+    savedQuizzes: [savedQuizSchema]
 });
 const chatSchema = new mongoose_1.Schema({
     chatId: { type: String, default: () => (0, uuid_1.v4)(), unique: true },

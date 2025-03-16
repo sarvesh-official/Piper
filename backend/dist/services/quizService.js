@@ -20,13 +20,16 @@ const chatModel_1 = __importDefault(require("../model/chatModel"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    const { extractedTexts, questionCount, difficulty, questionTypes, customPrompt, chatId } = params;
+    const { extractedTexts, questionCount, difficulty, questionTypes, customPrompt, chatId, forceRegenerate = false // Default to false if not provided
+     } = params;
     try {
         // Find the chat to get model information
         const chat = yield chatModel_1.default.findOne({ chatId });
         if (!chat) {
             throw new Error("Chat not found");
         }
+        // Skip checking for existing quiz when forceRegenerate is true
+        console.log(`Quiz generation with forceRegenerate=${forceRegenerate}`);
         if (!Array.isArray(extractedTexts) || extractedTexts.length === 0) {
             throw new Error("Invalid extractedTexts input.");
         }
@@ -69,10 +72,10 @@ const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, func
     
     Format your response as a valid JSON array of questions with this structure:
     [
-      title : "title of the quiz",
+      
       {{
         "id": 1,
-        "type": "mcq",
+        "type": "mcq", or "type" : true/false
         "question": "Example question?",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": 2,
@@ -98,26 +101,75 @@ const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, func
         // Extract the text content from the response
         const responseText = response.content.toString();
         console.log("Quiz generation response:", responseText);
-        // Parse the JSON response
-        const generatedQuestions = (yield parser.parse(responseText));
+        // Add robust JSON parsing with error handling
+        let generatedQuestions;
+        try {
+            // First attempt to parse directly
+            generatedQuestions = (yield parser.parse(responseText));
+        }
+        catch (parseError) {
+            console.warn("Initial JSON parsing failed, attempting cleanup:", parseError);
+            // Try to extract JSON from markdown or clean up the response
+            let cleanedJson = responseText;
+            // Extract JSON if wrapped in code blocks
+            const jsonMatch = responseText.match(/```(?:json)?([\s\S]*?)```/);
+            if (jsonMatch && jsonMatch[1]) {
+                cleanedJson = jsonMatch[1].trim();
+            }
+            // Remove any trailing commas in arrays/objects
+            cleanedJson = cleanedJson.replace(/,(\s*[\]}])/g, '$1');
+            // Try to find JSON array in the text
+            if (!cleanedJson.trim().startsWith('[')) {
+                const arrayStart = cleanedJson.indexOf('[');
+                const arrayEnd = cleanedJson.lastIndexOf(']');
+                if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
+                    cleanedJson = cleanedJson.substring(arrayStart, arrayEnd + 1);
+                }
+            }
+            try {
+                // Parse the cleaned JSON
+                generatedQuestions = JSON.parse(cleanedJson);
+            }
+            catch (secondError) {
+                console.error("Failed to parse JSON even after cleanup:", secondError);
+                throw new Error("Failed to parse the generated quiz questions. The AI response was not valid JSON.");
+            }
+        }
+        // Validate the structure of generated questions
+        if (!Array.isArray(generatedQuestions)) {
+            throw new Error("Invalid quiz questions format: Expected an array");
+        }
+        // Ensure each question has the required fields
+        generatedQuestions = generatedQuestions.map((q, index) => ({
+            id: q.id || index + 1,
+            type: q.type || "mcq",
+            question: q.question,
+            options: Array.isArray(q.options) ? q.options : [],
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation || ""
+        })).filter(q => q.question && q.options.length > 0);
+        if (generatedQuestions.length === 0) {
+            throw new Error("No valid questions were generated");
+        }
         // Store the quiz in the chat document
         yield chatModel_1.default.findOneAndUpdate({ chatId }, {
             $push: {
-                messages: [
-                    {
-                        role: "user",
-                        content: `Generate ${validatedQuestionCount} ${difficulty} quiz questions`,
-                        timestamp: new Date()
-                    },
-                    {
-                        role: "assistant",
-                        content: "Quiz generated successfully",
-                        timestamp: new Date()
-                    }
-                ]
+                messages: {
+                    $each: [
+                        {
+                            role: "user",
+                            content: `Generate ${validatedQuestionCount} ${difficulty} quiz questions`,
+                            timestamp: new Date()
+                        },
+                        {
+                            role: "assistant",
+                            content: "Quiz generated successfully",
+                            timestamp: new Date()
+                        }
+                    ]
+                }
             },
             $set: {
-                // Store the quiz in a new field with settings that include the question count
                 quiz: {
                     questions: generatedQuestions,
                     generatedAt: new Date(),
@@ -129,7 +181,7 @@ const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, func
                     }
                 }
             }
-        });
+        }, { new: true });
         return generatedQuestions;
     }
     catch (error) {

@@ -12,10 +12,20 @@ const utils_1 = require("./utils");
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
 const quizRoutes_1 = __importDefault(require("./routes/quizRoutes"));
+const docRoutes_1 = __importDefault(require("./routes/docRoutes"));
+const courseRoutes_1 = __importDefault(require("./routes/courseRoutes"));
+const roadmapRoutes_1 = __importDefault(require("./routes/roadmapRoutes"));
+const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 (0, dotenv_1.configDotenv)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
-app.use((0, cors_1.default)());
+// Updated CORS configuration to handle credentials
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 app.use(express_1.default.json());
 app.use((0, express_2.clerkMiddleware)({ publishableKey: process.env.CLERK_PUBLIC_KEY, secretKey: process.env.CLERK_SECRET_KEY }));
 app.get("/dashboard", authMiddleware_1.requireAuth, (req, res) => {
@@ -24,6 +34,10 @@ app.get("/dashboard", authMiddleware_1.requireAuth, (req, res) => {
 app.use("/api/upload", authMiddleware_1.requireAuth, uploadRoutes_1.default);
 app.use("/api/chat", authMiddleware_1.requireAuth, chatRoutes_1.default);
 app.use("/api/quiz", authMiddleware_1.requireAuth, quizRoutes_1.default);
+app.use("/api/documents", authMiddleware_1.requireAuth, docRoutes_1.default);
+app.use("/api/courses", authMiddleware_1.requireAuth, courseRoutes_1.default);
+app.use("/api/roadmaps", authMiddleware_1.requireAuth, roadmapRoutes_1.default); // Add roadmap routes
+app.use("/api/dashboard", authMiddleware_1.requireAuth, dashboardRoutes_1.default); // Add roadmap routes
 app.get("/", (req, res) => {
     res.json({ message: "Public API is working!" });
 });

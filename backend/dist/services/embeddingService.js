@@ -128,14 +128,24 @@ const deleteEmbeddingsById = (userId, embeddingIds) => __awaiter(void 0, void 0,
             const batchSize = 1000;
             for (let i = 0; i < ids.length; i += batchSize) {
                 const batch = ids.slice(i, i + batchSize);
-                // Use the correct delete method for the namespace
-                yield namespace.deleteMany(batch);
+                try {
+                    // Use the same direct array syntax as in storeInPinecone
+                    yield namespace.deleteMany(batch);
+                    console.log(`Successfully deleted batch of ${batch.length} embeddings`);
+                }
+                catch (batchError) {
+                    console.error(`Error deleting batch ${i / batchSize + 1}:`, batchError);
+                    // Continue with next batch even if this one failed
+                }
             }
-            console.log(`Deleted ${ids.length} embeddings from Pinecone for user ${userId}`);
+            console.log(`Attempted to delete ${ids.length} embeddings from Pinecone for user ${userId}`);
+        }
+        else {
+            console.log(`No embedding IDs provided for deletion for user ${userId}`);
         }
     }
     catch (error) {
-        console.error("Error deleting embeddings:", error);
+        console.error("Error in deleteEmbeddingsById:", error);
         throw new Error("Failed to delete embeddings from vector database");
     }
 });

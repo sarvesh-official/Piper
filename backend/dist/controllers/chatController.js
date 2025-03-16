@@ -16,6 +16,8 @@ exports.handleChatQuery = exports.deleteChat = exports.addMessageToChat = export
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const uuid_1 = require("uuid");
 const queryChat_1 = require("../services/queryChat");
+const pineconeService_1 = require("../services/pineconeService");
+const s3Service_1 = require("../services/s3Service");
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -128,18 +130,28 @@ const deleteChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             res.status(404).json({ error: "Chat not found" });
             return;
         }
-        // Extract file keys from the deleted chat
+        // Extract valid file keys from the deleted chat
         const fileKeys = deletedChat.files && Array.isArray(deletedChat.files)
-            ? deletedChat.files.map(file => file.fileKey)
+            ? deletedChat.files
+                .filter(file => file && file.fileKey) // Ensure file and fileKey exist
+                .map(file => file.fileKey)
             : [];
         let resourcesDeleted = true;
         try {
             // Delete files from S3
-            // if (fileKeys.length > 0) {
-            //   await deleteFilesFromS3(fileKeys.filter((key): key is string => !!key));
-            // }
+            if (fileKeys.length > 0) {
+                console.log(`Attempting to delete ${fileKeys.length} files from S3:`, fileKeys);
+                yield (0, s3Service_1.deleteFilesFromS3)(fileKeys);
+                console.log(`Successfully deleted uploaded files of chat ${chatId}`);
+            }
+            else {
+                console.log("No files to delete from S3");
+            }
             // Delete embeddings from Pinecone
-            // await deleteEmbeddingsFromPinecone(userId, fileKeys.filter((key): key is string => !!key));
+            if (fileKeys.length > 0) {
+                yield (0, pineconeService_1.deleteEmbeddingsFromPinecone)(userId, chatId, fileKeys);
+                console.log(`Successfully deleted vectors for chat ${chatId}`);
+            }
             console.log(`Successfully deleted resources for chat ${chatId}`);
         }
         catch (deleteError) {
