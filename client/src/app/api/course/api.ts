@@ -39,25 +39,18 @@ export interface Course {
 // API client functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
-// Helper function to create consistent fetch options
-function createFetchOptions(method: string, token: string, body?: any) {
-  return {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    credentials: 'include' as RequestCredentials,
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  };
-}
-
 // Create course from a roadmap
 export async function createCourseFromRoadmap(roadmapId: string, token: string): Promise<Course> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/courses/create`, 
-      createFetchOptions('POST', token, { roadmapId })
-    );
+    const response = await fetch(`${API_BASE_URL}/api/courses/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include',
+      body: JSON.stringify({ roadmapId })
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -73,9 +66,14 @@ export async function createCourseFromRoadmap(roadmapId: string, token: string):
 
 // Get a course by ID
 export async function getCourse(courseId: string, token: string): Promise<Course> {
-  const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, 
-    createFetchOptions('GET', token)
-  );
+  const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -87,9 +85,14 @@ export async function getCourse(courseId: string, token: string): Promise<Course
 
 // Get all courses for a user
 export async function getUserCourses(token: string): Promise<Course[]> {
-  const response = await fetch(`${API_BASE_URL}/api/courses`, 
-    createFetchOptions('GET', token)
-  );
+  const response = await fetch(`${API_BASE_URL}/api/courses`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -109,8 +112,15 @@ export async function updateLessonCompletion(
 ): Promise<Course> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/courses/${courseId}/lesson-completion`,
-      createFetchOptions('PUT', token, { moduleId, lessonIndex, completed })
+      `${API_BASE_URL}/api/courses/${courseId}/lesson-completion`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ moduleId, lessonIndex, completed })
+      }
     );
 
     if (!response.ok) {
@@ -133,8 +143,15 @@ export async function updateCourseStatus(
 ): Promise<Course> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/courses/${courseId}/status`,
-      createFetchOptions('PUT', token, { status, add })
+      `${API_BASE_URL}/api/courses/${courseId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status, add })
+      }
     );
 
     if (!response.ok) {
@@ -153,8 +170,14 @@ export async function updateCourseStatus(
 export async function toggleCourseFavorite(courseId: string, token: string): Promise<Course> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/courses/${courseId}/favorite`,
-      createFetchOptions('PUT', token)
+      `${API_BASE_URL}/api/courses/${courseId}/favorite`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      }
     );
 
     if (!response.ok) {
@@ -173,8 +196,14 @@ export async function toggleCourseFavorite(courseId: string, token: string): Pro
 export async function getFilteredCourses(filter: string = '', token: string): Promise<Course[]> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/courses?filter=${filter}`,
-      createFetchOptions('GET', token)
+      `${API_BASE_URL}/api/courses?filter=${filter}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      }
     );
 
     if (!response.ok) {
