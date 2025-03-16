@@ -118,7 +118,6 @@ export async function updateLessonCompletion(
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include',
         body: JSON.stringify({ moduleId, lessonIndex, completed })
       }
     );
@@ -149,7 +148,6 @@ export async function updateCourseStatus(
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include',
         body: JSON.stringify({ status, add })
       }
     );
@@ -176,7 +174,6 @@ export async function toggleCourseFavorite(courseId: string, token: string): Pro
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include'
       }
     );
 
@@ -202,7 +199,6 @@ export async function getFilteredCourses(filter: string = '', token: string): Pr
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include'
       }
     );
 
