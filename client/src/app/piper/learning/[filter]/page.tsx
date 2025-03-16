@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { Filter, Check, MoreHorizontal } from "lucide-react";
-import { courses as initialCourses } from "@/data/course";
 import { useState, useEffect } from "react";
 import CourseCard from "@/components/courses/CourseCard";
+import axios from "axios";
 
 type CourseStatus = 'active' | 'bookmarked' | 'completed';
 
@@ -24,7 +24,9 @@ const Dashboard = () => {
   const params = useParams();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [coursesData, setCoursesData] = useState<Course[]>(initialCourses);
+  const [coursesData, setCoursesData] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Filter options to display in the menu
   const filterOptions = [
@@ -33,23 +35,27 @@ const Dashboard = () => {
     { id: 'bookmarked', label: 'Bookmarked' },
   ];
 
-  // Set the active filter based on URL params
+  // Set the active filter based on URL params and fetch courses
   useEffect(() => {
     if (params.filter) {
       setActiveFilter(params.filter as string);
     }
+    fetchCourses(params.filter as string || 'all');
   }, [params.filter]);
 
-  // Function to get filtered courses based on active filter
-  const getFilteredCourses = (): Course[] => {
-    if (!activeFilter || activeFilter === 'all') {
-      return coursesData;
+  // Fetch courses from the backend based on filter
+  const fetchCourses = async (filter: string) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/courses?filter=${filter}`);
+      setCoursesData(response.data);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setError("Failed to load courses. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-    
-    return coursesData.filter(course => 
-      course.status && Array.isArray(course.status) && 
-      course.status.includes(activeFilter as CourseStatus)
-    );
   };
 
   // Apply filter and navigate
@@ -58,32 +64,42 @@ const Dashboard = () => {
     setShowFilterMenu(false);
   };
 
-  // Handle status change for courses (add or remove bookmarked/active status)
-  const handleStatusChange = (courseId: string, status: CourseStatus, add: boolean) => {
-    setCoursesData(prevCourses => 
-      prevCourses.map(course => {
-        if (course._id === courseId) {
-          let updatedStatus = [...(course.status || [])];
-          
-          if (add) {
-            // Add the status if it doesn't exist
-            if (!updatedStatus.includes(status)) {
-              updatedStatus.push(status);
+  // Handle status change for courses (add or remove statuses)
+  const handleStatusChange = async (courseId: string, status: CourseStatus, add: boolean) => {
+    try {
+      // Update UI optimistically
+      setCoursesData(prevCourses => 
+        prevCourses.map(course => {
+          if (course._id === courseId) {
+            let updatedStatus = [...(course.status || [])];
+            
+            if (add) {
+              // Add the status if it doesn't exist
+              if (!updatedStatus.includes(status)) {
+                updatedStatus.push(status);
+              }
+            } else {
+              // Remove the status
+              updatedStatus = updatedStatus.filter(s => s !== status);
             }
-          } else {
-            // Remove the status
-            updatedStatus = updatedStatus.filter(s => s !== status);
+            
+            return { ...course, status: updatedStatus };
           }
-          
-          return { ...course, status: updatedStatus };
-        }
-        return course;
-      })
-    );
+          return course;
+        })
+      );
+      
+      // Send update to backend
+      await axios.put(`/api/courses/${courseId}/status`, {
+        status,
+        add
+      });
+    } catch (err) {
+      console.error("Failed to update course status:", err);
+      // Revert the optimistic update on error
+      fetchCourses(activeFilter);
+    }
   };
-
-  // Get filtered courses
-  const filteredCourses = getFilteredCourses();
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto p-6 h-[85vh]">
@@ -131,8 +147,12 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 md:pr-2">
-          {filteredCourses?.length > 0 ? (
-            filteredCourses.map((course, index) => (
+          {loading ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">Loading courses...</p>
+          ) : error ? (
+            <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+          ) : coursesData?.length > 0 ? (
+            coursesData.map((course, index) => (
               <CourseCard
                 key={course._id || index}
                 id={course._id || `course-${index}`}

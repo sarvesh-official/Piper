@@ -9,7 +9,8 @@ import uploadRoutes from "./routes/uploadRoutes";
 import quizRoutes from "./routes/quizRoutes";
 import docRoutes from "./routes/docRoutes";
 import courseRoutes from "./routes/courseRoutes";
-import roadmapRoutes from "./routes/roadmapRoutes"; // Add roadmap routes
+import roadmapRoutes from "./routes/roadmapRoutes";
+import dashboardRoutes from "./routes/dashboardRoutes"; 
 
 configDotenv();
 
@@ -37,6 +38,7 @@ app.use("/api/quiz", requireAuth, quizRoutes);
 app.use("/api/documents", requireAuth, docRoutes);
 app.use("/api/courses", requireAuth, courseRoutes);
 app.use("/api/roadmaps", requireAuth, roadmapRoutes); // Add roadmap routes
+app.use("/api/dashboard", requireAuth, dashboardRoutes); // Add roadmap routes
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Public API is working!" });

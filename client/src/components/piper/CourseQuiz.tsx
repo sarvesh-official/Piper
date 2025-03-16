@@ -392,7 +392,7 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
 
   if (parseError) {
     return (
-      <div className="p-4 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 rounded-lg">
+      <div className="p-3 sm:p-4 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 rounded-lg">
         <div className="flex items-start">
           <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2 flex-shrink-0" />
           <div>
@@ -406,9 +406,9 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
 
   if (!quizParsed) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-piper-blue dark:text-piper-cyan" />
-        <span className="ml-2 text-gray-500 dark:text-gray-400">Loading quiz...</span>
+      <div className="flex items-center justify-center p-4 sm:p-8">
+        <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-piper-blue dark:text-piper-cyan" />
+        <span className="ml-2 text-sm sm:text-base text-gray-500 dark:text-gray-400">Loading quiz...</span>
       </div>
     );
   }
@@ -416,20 +416,20 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
   if (!quizActive) {
     // Show quiz start screen
     return (
-      <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-5 shadow-sm">
-        <h3 className="text-lg font-semibold mb-3">{quizTitle}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+      <div className="bg-white dark:bg-piper-darkblue border rounded-lg p-4 sm:p-5 shadow-sm">
+        <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">{quizTitle}</h3>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
           This quiz contains {currentQuiz.length} questions to test your knowledge.
         </p>
         
-        <div className="flex justify-between items-center">
-          <div className="text-sm">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+          <div className="text-xs sm:text-sm">
             <span className="text-gray-500 dark:text-gray-400">Questions: </span>
             <span className="font-medium">{currentQuiz.length}</span>
           </div>
           <button
             onClick={startQuiz}
-            className="px-4 py-2 bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue rounded-md hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors font-medium text-sm"
+            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-piper-blue dark:bg-piper-cyan text-white dark:text-piper-darkblue rounded-md hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors font-medium text-xs sm:text-sm"
           >
             Start Quiz
           </button>
@@ -440,18 +440,18 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
 
   // Quiz taking interface
   return (
-    <div className="bg-white dark:bg-piper-darkblue border rounded-lg shadow-sm flex flex-col h-full relative overflow-hidden pb-20">
+    <div className="bg-white dark:bg-piper-darkblue border rounded-lg shadow-sm flex flex-col h-full relative overflow-hidden pb-16 sm:pb-20">
       {/* Results message - only show if there are results */}
       {showResults && (
-        <div className={`p-3 m-4 rounded-md text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
+        <div className={`px-3 py-2 sm:p-3 mx-2 sm:m-4 rounded-md text-xs sm:text-sm ${calculateScore() === currentQuiz.length ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'}`}>
           {calculateScore() === currentQuiz.length ? (
             <div className="flex items-center">
-              <CheckCircle2 className="h-4 w-4 mr-2" />
+              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span>Perfect score! You got all {calculateScore()} questions correct.</span>
             </div>
           ) : (
             <div className="flex items-center">
-              <AlertTriangle className="h-4 w-4 mr-2" />
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span>You got {calculateScore()} out of {currentQuiz.length} questions correct.</span>
             </div>
           )}
@@ -459,18 +459,18 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
       )}
 
       {/* Questions container with proper scrolling */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         {currentQuiz.map((question, qIndex) => (
-          <div key={question.id || qIndex} className="border-b pb-4 last:border-b-0">
-            <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+          <div key={question.id || qIndex} className="border-b pb-3 sm:pb-4 last:border-b-0">
+            <p className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-3">
               Question {qIndex + 1} of {currentQuiz.length}
               {question.type === "mcq" ? " (Multiple Choice)" : question.type === "trueFalse" ? " (True/False)" : ""}
             </p>
-            <p className="text-sm sm:text-base mb-3 sm:mb-4 font-medium">
+            <p className="text-sm sm:text-base mb-2 sm:mb-4 font-medium">
               {question.question}
             </p>
 
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               {question.options && question.options.map((option, oIndex) => (
                 <div 
                   key={oIndex}
@@ -484,25 +484,25 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
                     checked={userAnswers[qIndex] === oIndex}
                     onChange={() => {}} // Controlled component
                     disabled={quizSubmitted}
-                    className="mr-2"
+                    className="mr-2 min-w-4"
                   />
-                  <label htmlFor={`q${qIndex}-${oIndex}`} className="text-sm cursor-pointer flex-1">
+                  <label htmlFor={`q${qIndex}-${oIndex}`} className="text-xs sm:text-sm cursor-pointer flex-1 py-1">
                     {option}
                   </label>
                   {showResults && userAnswers[qIndex] === oIndex && Number(userAnswers[qIndex]) !== Number(question.correctAnswer) && (
-                    <XCircle className="h-4 w-4 text-red-500" />
+                    <XCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-red-500" />
                   )}
                   {showResults && Number(oIndex) === Number(question.correctAnswer) && (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-green-500" />
                   )}
                 </div>
               ))}
             </div>
 
             {showResults && question.explanation && (
-              <div className="mt-3 text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                <p className="font-medium">Explanation:</p>
-                <p className="text-gray-700 dark:text-gray-300">{question.explanation}</p>
+              <div className="mt-2 sm:mt-3 text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                <p className="font-medium text-xs sm:text-sm">Explanation:</p>
+                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{question.explanation}</p>
               </div>
             )}
           </div>
@@ -510,47 +510,49 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
       </div>
 
       {/* Fixed action buttons at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-piper-darkblue p-3 border-t">
-        <div className="flex flex-wrap gap-2">
+      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-piper-darkblue p-2 sm:p-3 border-t">
+        <div className="flex flex-col sm:flex-row gap-2">
           {!quizSubmitted ? (
             <button 
               onClick={submitQuiz} 
               disabled={!allQuestionsAnswered()}
-              className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 dark:text-piper-darkblue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {allQuestionsAnswered() ? (
                 "Submit Quiz"
               ) : (
-                `Answer all ${currentQuiz.length - userAnswers.filter(a => a !== null).length} remaining questions`
+                <span className="truncate">
+                  Answer {currentQuiz.length - userAnswers.filter(a => a !== null).length} more question{currentQuiz.length - userAnswers.filter(a => a !== null).length !== 1 ? 's' : ''}
+                </span>
               )}
             </button>
           ) : (
-            <>
+            <div className="flex flex-col sm:flex-row w-full gap-2">
               <button 
                 onClick={restartQuiz}
-                className="flex-1 inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="w-full sm:flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Retry Quiz
+                <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+                Retry
               </button>
               <button 
                 onClick={downloadQuizAsPdf}
                 disabled={isDownloading}
-                className="inline-flex items-center justify-center px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                className="w-full sm:flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
               >
                 {isDownloading ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    Generating PDF...
+                    <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 animate-spin" />
+                    Generating...
                   </>
                 ) : (
                   <>
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Download
+                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+                    Download PDF
                   </>
                 )}
               </button>
-            </>
+            </div>
           )}
         </div>
         
@@ -567,5 +569,6 @@ export default function CourseQuiz({ quizContent, courseId, onComplete }: Course
           </div>
         )}
       </div>
-    </div>);
+    </div>
+  );
 }

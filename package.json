@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "markdown-to-jsx": "^7.7.4",
-    "react-markdown": "^10.1.0"
-  }
-}

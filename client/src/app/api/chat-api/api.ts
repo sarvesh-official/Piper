@@ -123,6 +123,25 @@ export const fetchChatHistory = async (token: string) => {
   }
 };
 
+// Get all chat data
+export const fetchAllChats = async (token: string) => {
+  try {
+    const response = await fetch(`${API_URL}/api/chat/all`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to load all chats');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching all chats:', error);
+    throw new Error('Failed to load all chats');
+  }
+};
 
 // Delete chat
 export const deleteChat = async (chatId: string, token: string) => {

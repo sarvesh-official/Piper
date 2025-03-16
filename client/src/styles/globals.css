@@ -1,0 +1,36 @@
+/* Add this to your global CSS to ensure the progress bar styles are applied correctly */
+
+/* Custom toast styling with higher specificity */
+.Toastify .Toastify__progress-bar {
+  height: 3px !important;
+}
+
+/* Override default success color for all themes */
+.Toastify .Toastify__progress-bar--success {
+  background: var(--toastify-color-progress-success) !important;
+}
+
+/* Theme-specific progress bar colors */
+html.dark .Toastify .Toastify__progress-bar--success {
+  background-color: #22d3ee !important; /* piper-cyan in dark mode */
+}
+
+html:not(.dark) .Toastify .Toastify__progress-bar--success {
+  background-color: #1868F2 !important; /* piper-blue in light mode */
+}
+
+/* Custom toast styling */
+.Toastify__progress-bar {
+  height: 3px !important;
+}
+
+.custom-progress-bar {
+  background: var(--toastify-color-progress-light) !important;
+}
+
+/* Make sure toast content is properly aligned */
+.Toastify__toast-body {
+  align-items: center;
+  display: flex;
+  margin: 0.5rem 0;
+}
