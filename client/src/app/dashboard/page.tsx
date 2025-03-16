@@ -122,7 +122,7 @@ const Dashboard = () => {
       >
         <h2 className="text-lg font-semibold mb-4">Your Chats</h2>
         {isLoadingChats ? (
-          <div className="flex justify-center items-center h-full">
+          <div className="flex justify-center items-center min-h-[150px]">
             <Loader2 className="animate-spin" size={24} />
           </div>
         ) : error ? (
@@ -221,7 +221,7 @@ const Dashboard = () => {
       >
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Courses</h2>
         {isLoadingCourses ? (
-          <div className="flex justify-center items-center h-full">
+          <div className="flex justify-center items-center min-h-[150px]">
             <Loader2 className="animate-spin" size={24} />
           </div>
         ) : error ? (
