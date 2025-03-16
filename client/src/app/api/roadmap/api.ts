@@ -41,24 +41,17 @@ export interface GenerateRoadmapParams {
 // API client functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
-// Helper function to create consistent fetch options
-function createFetchOptions(method: string, body?: any) {
-  return {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include' as RequestCredentials,
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  };
-}
-
 // Generate a roadmap
-export async function generateRoadmap(params: GenerateRoadmapParams): Promise<Roadmap> {
+export async function generateRoadmap(params: GenerateRoadmapParams, token: string): Promise<Roadmap> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/roadmaps/generate`, 
-      createFetchOptions('POST', params)
-    );
+    const response = await fetch(`${API_BASE_URL}/api/roadmaps/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(params)
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -73,10 +66,15 @@ export async function generateRoadmap(params: GenerateRoadmapParams): Promise<Ro
 }
 
 // Regenerate a roadmap
-export async function regenerateRoadmap(roadmapId: string, params: GenerateRoadmapParams): Promise<Roadmap> {
-  const response = await fetch(`${API_BASE_URL}/api/roadmaps/${roadmapId}/regenerate`, 
-    createFetchOptions('POST', params)
-  );
+export async function regenerateRoadmap(roadmapId: string, params: GenerateRoadmapParams, token: string): Promise<Roadmap> {
+  const response = await fetch(`${API_BASE_URL}/api/roadmaps/${roadmapId}/regenerate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(params)
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -87,10 +85,13 @@ export async function regenerateRoadmap(roadmapId: string, params: GenerateRoadm
 }
 
 // Get a roadmap by ID
-export async function getRoadmap(roadmapId: string): Promise<Roadmap> {
-  const response = await fetch(`${API_BASE_URL}/api/roadmaps/${roadmapId}`, 
-    createFetchOptions('GET')
-  );
+export async function getRoadmap(roadmapId: string, token: string): Promise<Roadmap> {
+  const response = await fetch(`${API_BASE_URL}/api/roadmaps/${roadmapId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -101,10 +102,13 @@ export async function getRoadmap(roadmapId: string): Promise<Roadmap> {
 }
 
 // Get all roadmaps for a user
-export async function getUserRoadmaps(): Promise<Roadmap[]> {
-  const response = await fetch(`${API_BASE_URL}/api/roadmaps`, 
-    createFetchOptions('GET')
-  );
+export async function getUserRoadmaps(token: string): Promise<Roadmap[]> {
+  const response = await fetch(`${API_BASE_URL}/api/roadmaps`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -115,11 +119,16 @@ export async function getUserRoadmaps(): Promise<Roadmap[]> {
 }
 
 // Create a detailed course from a roadmap
-export async function createCourseFromRoadmap(roadmapId: string): Promise<any> {
+export async function createCourseFromRoadmap(roadmapId: string, token: string): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/courses/create`, 
-      createFetchOptions('POST', { roadmapId })
-    );
+    const response = await fetch(`${API_BASE_URL}/api/courses/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ roadmapId })
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));

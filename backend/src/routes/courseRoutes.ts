@@ -4,7 +4,8 @@ import {
   getCourse, 
   getUserCourses, 
   updateLessonCompletion, 
-  updateCourseStatus 
+  updateCourseStatus,
+  toggleCourseFavorite 
 } from '../controllers/courseController';
 import { requireAuth } from '../middlewares/authMiddleware';
 
@@ -27,5 +28,8 @@ router.put('/:id/lesson-completion', updateLessonCompletion);
 
 // Update course status (bookmark, complete, etc.)
 router.put('/:id/status', updateCourseStatus);
+
+// New route for toggling favorite status
+router.put('/:id/favorite', toggleCourseFavorite);
 
 export default router;

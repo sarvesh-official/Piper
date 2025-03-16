@@ -67,7 +67,6 @@ const GenerateCourse = () => {
   
   // Bookmark state
   const [isBookmarked, setIsBookmarked] = useState(false);
-
   // Check if we're editing an existing roadmap
   useEffect(() => {
     const existingRoadmapId = searchParams.get('roadmapId');
@@ -78,8 +77,15 @@ const GenerateCourse = () => {
 
   const fetchExistingRoadmap = async (roadmapId: string) => {
     setIsGenerating(true);
+    const token = await getToken()
+    if (!token) {
+      console.error("User not authenticated");
+      toast.error("Please log in to view this roadmap");
+      setIsGenerating(false);
+      return;
+    }
     try {
-      const roadmapData = await roadmapApi.getRoadmap(roadmapId);
+      const roadmapData = await roadmapApi.getRoadmap(roadmapId,token);
       setRoadmap(roadmapData);
       setRoadmapId(roadmapData._id);
       setCourseTitle(roadmapData.title);
@@ -117,6 +123,11 @@ const GenerateCourse = () => {
     setIsGenerating(true);
     
     try {
+      const token = await getToken()
+
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
       // Generate roadmap first using the roadmap API - ensure this is used correctly
       const generatedRoadmap = await roadmapApi.generateRoadmap({
         title: courseTitle,
@@ -124,7 +135,7 @@ const GenerateCourse = () => {
         duration: courseDuration,
         includeQuizzes,
         includeCode
-      });
+      },token);
       
       setRoadmap(generatedRoadmap);
       setRoadmapId(generatedRoadmap._id);
@@ -145,13 +156,17 @@ const GenerateCourse = () => {
     setIsRegenerating(true);
     
     try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
       const regeneratedRoadmap = await roadmapApi.regenerateRoadmap(roadmapId, {
         title: courseTitle,
         complexity: courseComplexity,
         duration: courseDuration,
         includeQuizzes,
         includeCode
-      });
+      }, token);
       
       setRoadmap(regeneratedRoadmap);
       
