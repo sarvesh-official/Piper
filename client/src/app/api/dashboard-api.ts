@@ -1,12 +1,64 @@
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+export interface QuizQuestion {
+  id: number;
+  type: 'mcq' | 'true/false' | 'true_false';
+  question: string;
+  options: string[];
+  correctAnswer: number | string;
+  explanation?: string;
+  _id?: string; // MongoDB adds this field
+}
+
+export interface QuizSettings {
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  questionCount: number;
+  questionTypes: {
+    mcq: boolean;
+    trueFalse: boolean;
+  };
+  customPrompt?: string;
+}
+
+export interface SavedQuiz {
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  quizTitle: string;
+  savedAt: string; // ISO date string
+  isSubmitted: boolean;
+  score?: number;
+  totalQuestions?: number;
+  _id?: string; // MongoDB adds this field
+}
+
+export interface QuizData {
+  questions: QuizQuestion[];
+  generatedAt: string; // ISO date string
+  settings: QuizSettings;
+  savedQuizzes: SavedQuiz[];
+  _id?: string; // MongoDB adds this field
+}
+
+export interface FileInfo {
+  userId: string;
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  fileType: string;
+  extractedText?: string;
+  embeddingId?: string | string[];
+  _id?: string; // MongoDB adds this field
+}
+
 export interface ChatSummary {
   id: string;
   topic: string;
   chat: string;
-  quiz: number;
-  files: { fileName: string, fileUrl?: string, fileKey?: string }[];
-  createdAt: string;
+  quiz: number; // quiz progress percentage
+  quizData?: QuizData; // quiz data object from backend
+  files: FileInfo[];
+  createdAt: string; // ISO date string
 }
 
 export interface CourseSummary {
