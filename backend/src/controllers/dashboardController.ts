@@ -7,7 +7,7 @@ export const getDashboardChatSummaries = async (req: Request, res: Response) => 
     const userId = (req as any).auth.userId;
 
     const chats = await Chat.find({ userId })
-      .select("chatId chatName files messages createdAt")
+      .select("chatId chatName files messages createdAt quiz")  // Changed quizData to quiz
       .sort({ createdAt: -1 })
       .lean();
 
@@ -17,7 +17,7 @@ export const getDashboardChatSummaries = async (req: Request, res: Response) => 
     }
 
     const chatSummaries = chats.map(chat => {
-      // Calculate a fake quiz psrogress for demo purposes (can be replaced with actual logic)
+      // Keep the existing fake quiz progress calculation
       const quizProgress = Math.floor(Math.random() * 100);
       
       // Get the most recent message content as preview
@@ -30,6 +30,7 @@ export const getDashboardChatSummaries = async (req: Request, res: Response) => 
         topic: chat.chatName || "Untitled Chat",
         chat: lastMessage.substring(0, 50) + (lastMessage.length > 50 ? "..." : ""),
         quiz: quizProgress,
+        quizData: chat.quiz,  // Include the whole quiz object 
         files: chat.files || [],
         createdAt: chat.createdAt
       };

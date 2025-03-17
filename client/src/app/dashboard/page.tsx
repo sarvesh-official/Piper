@@ -31,6 +31,35 @@ const getFileIcon = (fileName: string) => {
   return <File size={20} />;
 };
 
+const handleDownload = (e: React.MouseEvent, fileUrl: string, fileName: string) => {
+  e.stopPropagation();
+  
+  // For direct download, fetch the file as a blob
+  fetch(fileUrl)
+    .then(response => response.blob())
+    .then(blob => {
+      // Create a blob URL for the file
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Create an anchor element to download the file
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      
+      // Append, click, and remove to trigger the download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    })
+    .catch(err => {
+      console.error("Download failed:", err);
+    });
+};
+
 const Dashboard = () => {
   const { user } = useUser();
   const [currentTime, setCurrentTime] = useState("");
@@ -39,7 +68,6 @@ const Dashboard = () => {
   const { theme } = useTheme();
   const { getToken } = useAuth();
   
-  // Add states for chat activities and courses
   const [chatSummaries, setChatSummaries] = useState<ChatSummary[]>([]);
   const [courseSummaries, setCourseSummaries] = useState<CourseSummary[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
@@ -81,8 +109,7 @@ const Dashboard = () => {
         
         setChatSummaries(chatData);
         setCourseSummaries(courseData);
-        console.log("Chat Summaries:", chatData);
-        console.log("Course Summaries:", courseData);
+
       } catch (err) {
         setError("Failed to load dashboard data");
         console.error("Error fetching dashboard data:", err);
@@ -189,7 +216,11 @@ const Dashboard = () => {
                             </span>
                             <button 
                               className="p-1 bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                if (file.fileUrl && file.fileName) {
+                                  handleDownload(e, file.fileUrl, file.fileName);
+                                }
+                              }}
                             >
                               <Download size={14} />
                             </button>
@@ -198,7 +229,18 @@ const Dashboard = () => {
                       </div>
                       <button 
                         className="p-2 bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue hover:bg-blue-600 text-white rounded-lg flex items-center font-medium gap-1"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Check if quiz data exists and has saved quizzes
+                          if (chat.quizData && 
+                              chat.quizData.savedQuizzes && 
+                              chat.quizData.savedQuizzes.length > 0 && 
+                              chat.quizData.savedQuizzes[0].fileUrl) {
+                            handleDownload(e, chat.quizData.savedQuizzes[0].fileUrl, `${chat.topic}_quiz.pdf`);
+                          } else {
+                            console.error("No quiz file available for download");
+                          }
+                        }}
                       >
                         <Download size={16} />
                         <span className="text-sm">Quiz</span>

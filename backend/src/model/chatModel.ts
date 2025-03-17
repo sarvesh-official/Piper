@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export interface IQuizQuestion {
   id: number;
-  type: 'mcq' | 'true/false'| 'true_false';  // Added 'true_false' to the type
+  type: 'mcq' | 'true/false'| 'true_false';  
   question: string;
   options: string[];
   correctAnswer: number | string;
@@ -35,7 +35,7 @@ export interface IQuiz {
   questions: IQuizQuestion[];
   generatedAt: Date;
   settings: IQuizSettings;
-  savedQuizzes: ISavedQuiz[]; // Changed from optional to required property
+  savedQuizzes: ISavedQuiz[]; 
 }
 
 export interface IFile {
@@ -45,7 +45,7 @@ export interface IFile {
   fileKey: string;
   fileType: string;
   extractedText?: string;
-  embeddingId?: string | string[]; // Updated to support array of embedding IDs
+  embeddingId?: string | string[]; 
 }
 
 export interface IMessage {
@@ -72,7 +72,7 @@ const fileSchema = new Schema<IFile>({
   fileKey: { type: String, required: true },
   fileType: { type: String, required: true },
   extractedText: { type: String },
-  embeddingId: { type: Schema.Types.Mixed }, // Updated to mixed type to support string or array
+  embeddingId: { type: Schema.Types.Mixed }, 
 });
 
 const messageSchema = new Schema<IMessage>({
@@ -85,13 +85,13 @@ const quizQuestionSchema = new mongoose.Schema({
   id: Number,
   type: {
     type: String,
-    enum: ['mcq', 'true/false', 'true_false'],  // Added 'true_false' to the enum'true_false'], // Added 'true_false' to the type
+    enum: ['mcq', 'true/false', 'true_false'],  
     required: true
   },
   question: String,
   options: [String],
   correctAnswer: {
-    type: mongoose.Schema.Types.Mixed, // Can be Number or String
+    type: mongoose.Schema.Types.Mixed, 
     required: true
   },
   explanation: String
