@@ -7,7 +7,7 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer: number | string;
   explanation?: string;
-  _id?: string; // MongoDB adds this field
+  _id?: string; 
 }
 
 export interface QuizSettings {
@@ -25,19 +25,19 @@ export interface SavedQuiz {
   fileUrl: string;
   fileKey: string;
   quizTitle: string;
-  savedAt: string; // ISO date string
+  savedAt: string; 
   isSubmitted: boolean;
   score?: number;
   totalQuestions?: number;
-  _id?: string; // MongoDB adds this field
+  _id?: string; 
 }
 
 export interface QuizData {
   questions: QuizQuestion[];
-  generatedAt: string; // ISO date string
+  generatedAt: string; 
   settings: QuizSettings;
   savedQuizzes: SavedQuiz[];
-  _id?: string; // MongoDB adds this field
+  _id?: string; 
 }
 
 export interface FileInfo {
@@ -48,17 +48,17 @@ export interface FileInfo {
   fileType: string;
   extractedText?: string;
   embeddingId?: string | string[];
-  _id?: string; // MongoDB adds this field
+  _id?: string;
 }
 
 export interface ChatSummary {
   id: string;
   topic: string;
   chat: string;
-  quiz: number; // quiz progress percentage
-  quizData?: QuizData; // quiz data object from backend
+  quiz: number;
+  quizData?: QuizData; 
   files: FileInfo[];
-  createdAt: string; // ISO date string
+  createdAt: string; 
 }
 
 export interface CourseSummary {
@@ -69,7 +69,6 @@ export interface CourseSummary {
   status: string[];
 }
 
-// Get chat summaries for dashboard
 export const fetchDashboardChatSummaries = async (token: string): Promise<ChatSummary[]> => {
   try {
     const response = await fetch(`${API_URL}/api/dashboard/chats`, {

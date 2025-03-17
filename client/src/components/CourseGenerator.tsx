@@ -18,12 +18,13 @@ import {
   BookMarked,
   Star
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const CourseGenerator = () => {
   const [courseComplexity, setCourseComplexity] = useState(50);
   const [courseDuration, setCourseDuration] = useState(60);
   const [interactivityLevel, setInteractivityLevel] = useState(70);
-  
+    const router = useRouter();
   return (
     <section id="course-generator" className="py-20 bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
       <div className="absolute inset-0 z-0 opacity-50">
@@ -147,7 +148,7 @@ const CourseGenerator = () => {
                   </span>
                 </div>
                 
-                <button className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors shadow-md hover:shadow-lg">
+                <button onClick={()=> router.push("/sign-in")} className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-piper-blue dark:bg-piper-cyan dark:text-piper-darkblue hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors shadow-md hover:shadow-lg">
                   <BookOpen className="mr-2 h-5 w-5" />
                   Generate Course
                 </button>

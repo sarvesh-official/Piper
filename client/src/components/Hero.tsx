@@ -15,12 +15,13 @@ import { useState } from "react";
 import TypewriterEffect from "./ui/TypewriteEffect";
 import Link from "next/link";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
-import { Button } from "./ui/button";
-
+import { useRouter } from "next/navigation";
 export const Hero = () => {
   const [activeTab, setActiveTab] = useState<"upload" | "chat" | "quiz">(
     "upload"
   );
+
+  const router = useRouter()
 
   return (
     <section
@@ -192,7 +193,7 @@ export const Hero = () => {
                             CSV
                           </div>
                         </div>
-                        <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors">
+                        <button onClick={()=> router.push("/sign-in")} className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white dark:text-piper-darkblue bg-piper-blue dark:bg-piper-cyan hover:bg-piper-blue/90 dark:hover:bg-piper-cyan/90 transition-colors">
                           Browse Files
                         </button>
                       </div>
