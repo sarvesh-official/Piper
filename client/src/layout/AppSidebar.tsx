@@ -70,10 +70,7 @@ const othersItems: NavItem[] = [
   {
     icon: <Settings size={20} />,
     name: "Settings",
-    subItems: [
-      { name: "Account Settings", path: "/settings/account" },
-      { name: "Privacy", path: "/settings/privacy" }
-    ]
+    path: "/dashboard/profile"
   },
   {
     icon: <LogOut size={20} color="red" />,
