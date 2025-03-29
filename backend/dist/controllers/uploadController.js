@@ -17,7 +17,6 @@ const s3Service_1 = require("../services/s3Service");
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const embeddingService_1 = require("../services/embeddingService");
 const fileProcessor_1 = require("../utils/fileProcessor");
-const pdf_parse_1 = __importDefault(require("pdf-parse"));
 const mammoth_1 = __importDefault(require("mammoth"));
 const multer_1 = __importDefault(require("multer"));
 // Add a middleware to handle multer errors
@@ -177,8 +176,8 @@ exports.uploadFilesAndExtractText = uploadFilesAndExtractText;
 const extractTextFromFile = (fileBuffer, mimeType) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (mimeType === "application/pdf") {
-            const pdfData = yield (0, pdf_parse_1.default)(fileBuffer);
-            return pdfData.text;
+            // Use the enhanced PDF extraction function that can detect handwriting
+            return yield (0, fileProcessor_1.extractTextFromPDF)(fileBuffer);
         }
         else if (mimeType ===
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {

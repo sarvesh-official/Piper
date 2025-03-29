@@ -19,7 +19,7 @@ const getDashboardChatSummaries = (req, res) => __awaiter(void 0, void 0, void 0
     try {
         const userId = req.auth.userId;
         const chats = yield chatModel_1.default.find({ userId })
-            .select("chatId chatName files messages createdAt")
+            .select("chatId chatName files messages createdAt quiz") // Changed quizData to quiz
             .sort({ createdAt: -1 })
             .lean();
         if (!chats || chats.length === 0) {
@@ -27,7 +27,7 @@ const getDashboardChatSummaries = (req, res) => __awaiter(void 0, void 0, void 0
             return;
         }
         const chatSummaries = chats.map(chat => {
-            // Calculate a fake quiz psrogress for demo purposes (can be replaced with actual logic)
+            // Keep the existing fake quiz progress calculation
             const quizProgress = Math.floor(Math.random() * 100);
             // Get the most recent message content as preview
             const lastMessage = chat.messages && chat.messages.length > 0
@@ -38,6 +38,7 @@ const getDashboardChatSummaries = (req, res) => __awaiter(void 0, void 0, void 0
                 topic: chat.chatName || "Untitled Chat",
                 chat: lastMessage.substring(0, 50) + (lastMessage.length > 50 ? "..." : ""),
                 quiz: quizProgress,
+                quizData: chat.quiz, // Include the whole quiz object 
                 files: chat.files || [],
                 createdAt: chat.createdAt
             };

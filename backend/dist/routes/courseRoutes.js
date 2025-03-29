@@ -19,4 +19,6 @@ router.get('/', courseController_1.getUserCourses);
 router.put('/:id/lesson-completion', courseController_1.updateLessonCompletion);
 // Update course status (bookmark, complete, etc.)
 router.put('/:id/status', courseController_1.updateCourseStatus);
+// New route for toggling favorite status
+router.put('/:id/favorite', courseController_1.toggleCourseFavorite);
 exports.default = router;

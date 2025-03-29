@@ -42,7 +42,7 @@ const fileSchema = new mongoose_1.Schema({
     fileKey: { type: String, required: true },
     fileType: { type: String, required: true },
     extractedText: { type: String },
-    embeddingId: { type: mongoose_1.Schema.Types.Mixed }, // Updated to mixed type to support string or array
+    embeddingId: { type: mongoose_1.Schema.Types.Mixed },
 });
 const messageSchema = new mongoose_1.Schema({
     role: { type: String, required: true, enum: ["user", "system", "assistant"] },
@@ -53,13 +53,13 @@ const quizQuestionSchema = new mongoose_1.default.Schema({
     id: Number,
     type: {
         type: String,
-        enum: ['mcq', 'true/false', 'true_false'], // Added 'true_false' to the enum'true_false'], // Added 'true_false' to the type
+        enum: ['mcq', 'true/false', 'true_false'],
         required: true
     },
     question: String,
     options: [String],
     correctAnswer: {
-        type: mongoose_1.default.Schema.Types.Mixed, // Can be Number or String
+        type: mongoose_1.default.Schema.Types.Mixed,
         required: true
     },
     explanation: String
