@@ -2,8 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { uploadFileToS3 } from "../services/s3Service";
 import Chat from "../model/chatModel";
 import { generateEmbeddings, storeChunkedEmbeddings, updateFileWithEmbeddingId } from "../services/embeddingService";
-import { extractTextFromCSV, extractTextFromExcel, extractTextFromImage, extractTextFromPPTX } from "../utils/fileProcessor";
-import PdfParse from "pdf-parse";
+import { extractTextFromCSV, extractTextFromExcel, extractTextFromImage, extractTextFromPPTX, extractTextFromPDF } from "../utils/fileProcessor";
 import mammoth from "mammoth";
 import multer from "multer";
 
@@ -197,8 +196,8 @@ const extractTextFromFile = async (
 ): Promise<string> => {
   try {
     if (mimeType === "application/pdf") {
-      const pdfData = await PdfParse(fileBuffer);
-      return pdfData.text;
+      // Use the enhanced PDF extraction function that can detect handwriting
+      return await extractTextFromPDF(fileBuffer);
     } else if (
       mimeType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
