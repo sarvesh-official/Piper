@@ -4,7 +4,7 @@ import { pinecone } from "./pineconeService";
 import { chunkText } from "../utils/textChunker";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY as string);
-const embeddingModel = "embedding-001";
+const embeddingModel = "text-embedding-004";
 
 export const generateEmbeddings = async (text: string): Promise<number[][]> => {
   try {
