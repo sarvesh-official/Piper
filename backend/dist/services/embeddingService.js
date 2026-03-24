@@ -18,7 +18,7 @@ const chatModel_1 = __importDefault(require("../model/chatModel"));
 const pineconeService_1 = require("./pineconeService");
 const textChunker_1 = require("../utils/textChunker");
 const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-const embeddingModel = "embedding-001";
+const embeddingModel = "text-embedding-004";
 const generateEmbeddings = (text) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Check if text needs chunking
