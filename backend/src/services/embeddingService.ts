@@ -4,23 +4,50 @@ import { pinecone } from "./pineconeService";
 import { chunkText } from "../utils/textChunker";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY as string);
-const embeddingModel = "text-embedding-004";
+const EMBEDDING_MODELS = [
+  process.env.GOOGLE_EMBEDDING_MODEL,
+  "gemini-embedding-001",
+  "text-embedding-004",
+  "embedding-001",
+].filter((model): model is string => Boolean(model));
 
 export const generateEmbeddings = async (text: string): Promise<number[][]> => {
   try {
     // Check if text needs chunking
     const textChunks = chunkText(text);
-    
-    // Generate embeddings for each chunk
-    const embeddingsArray = await Promise.all(
-      textChunks.map(async (chunk: string) => {
+
+    let lastError: unknown;
+
+    for (const embeddingModel of EMBEDDING_MODELS) {
+      try {
         const model = genAI.getGenerativeModel({ model: embeddingModel });
-        const result = await model.embedContent(chunk);
-        return result.embedding.values;
-      })
-    );
-    
-    return embeddingsArray;
+
+        // Generate embeddings for each chunk
+        const embeddingsArray = await Promise.all(
+          textChunks.map(async (chunk: string) => {
+            const result = await model.embedContent(chunk);
+            return result.embedding.values;
+          })
+        );
+
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`Using embedding model: ${embeddingModel}`);
+        }
+
+        return embeddingsArray;
+      } catch (error) {
+        lastError = error;
+
+        const status = (error as { status?: number })?.status;
+        if (status !== 404) {
+          throw error;
+        }
+
+        console.warn(`Embedding model ${embeddingModel} unavailable, trying fallback model.`);
+      }
+    }
+
+    throw lastError ?? new Error("No supported embedding model found");
   } catch (error) {
     console.error("Error generating embeddings:", error);
     throw new Error("Failed to generate embeddings");

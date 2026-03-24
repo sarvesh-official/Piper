@@ -18,18 +18,40 @@ const chatModel_1 = __importDefault(require("../model/chatModel"));
 const pineconeService_1 = require("./pineconeService");
 const textChunker_1 = require("../utils/textChunker");
 const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-const embeddingModel = "text-embedding-004";
+const EMBEDDING_MODELS = [
+    process.env.GOOGLE_EMBEDDING_MODEL,
+    "gemini-embedding-001",
+    "text-embedding-004",
+    "embedding-001",
+].filter((model) => Boolean(model));
 const generateEmbeddings = (text) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Check if text needs chunking
         const textChunks = (0, textChunker_1.chunkText)(text);
-        // Generate embeddings for each chunk
-        const embeddingsArray = yield Promise.all(textChunks.map((chunk) => __awaiter(void 0, void 0, void 0, function* () {
-            const model = genAI.getGenerativeModel({ model: embeddingModel });
-            const result = yield model.embedContent(chunk);
-            return result.embedding.values;
-        })));
-        return embeddingsArray;
+        let lastError;
+        for (const embeddingModel of EMBEDDING_MODELS) {
+            try {
+                const model = genAI.getGenerativeModel({ model: embeddingModel });
+                // Generate embeddings for each chunk
+                const embeddingsArray = yield Promise.all(textChunks.map((chunk) => __awaiter(void 0, void 0, void 0, function* () {
+                    const result = yield model.embedContent(chunk);
+                    return result.embedding.values;
+                })));
+                if (process.env.NODE_ENV !== "production") {
+                    console.log(`Using embedding model: ${embeddingModel}`);
+                }
+                return embeddingsArray;
+            }
+            catch (error) {
+                lastError = error;
+                const status = error === null || error === void 0 ? void 0 : error.status;
+                if (status !== 404) {
+                    throw error;
+                }
+                console.warn(`Embedding model ${embeddingModel} unavailable, trying fallback model.`);
+            }
+        }
+        throw lastError !== null && lastError !== void 0 ? lastError : new Error("No supported embedding model found");
     }
     catch (error) {
         console.error("Error generating embeddings:", error);
