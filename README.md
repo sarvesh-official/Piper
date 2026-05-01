@@ -60,3 +60,4 @@ This project is open-source under the MIT License.
 Feel free to contribute and improve Piper! 🚀
 <!-- Project: Piper AI -->
 // initial setup
+// env vars
