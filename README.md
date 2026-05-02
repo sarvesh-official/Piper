@@ -58,3 +58,4 @@ Create a `.env` file and add necessary API keys for AI services, database connec
 This project is open-source under the MIT License.
 
 Feel free to contribute and improve Piper! 🚀
+<!-- Project: Piper AI -->
