@@ -61,3 +61,4 @@ Feel free to contribute and improve Piper! 🚀
 <!-- Project: Piper AI -->
 // initial setup
 // env vars
+// architecture
