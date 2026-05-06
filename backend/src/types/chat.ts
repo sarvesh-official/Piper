@@ -3,3 +3,4 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   }// interface
+// role type
