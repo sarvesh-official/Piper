@@ -83,3 +83,4 @@ export const fetchExtractedText = async (userId: string, chatId: string) => {
 
   return extractedText;
 };
+
