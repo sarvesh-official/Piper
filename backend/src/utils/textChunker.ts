@@ -68,3 +68,4 @@ export function chunkText(text: string, maxChunkSize: number = 50000): string[] 
   return chunks.filter(chunk => chunk.trim().length > 0);
 };
 
+// chunk size
