@@ -69,3 +69,4 @@ export function chunkText(text: string, maxChunkSize: number = 50000): string[] 
 };
 
 // chunk size
+// overlap
