@@ -76,3 +76,4 @@ export async function getModel(modelName: string = DEFAULT_LLM_MODEL) {
 }
 
 // retry logic
+// fallback model
