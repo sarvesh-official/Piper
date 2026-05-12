@@ -74,3 +74,4 @@ export async function generateText(params: {
 export async function getModel(modelName: string = DEFAULT_LLM_MODEL) {
   return modelName;
 }
+
