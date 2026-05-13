@@ -181,3 +181,4 @@
 //   }
 // }
 // batch verify
+// dimension check
