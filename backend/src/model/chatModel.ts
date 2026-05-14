@@ -141,3 +141,4 @@ const Chat = mongoose.model<IChat>("Chat", chatSchema);
 
 export default Chat;
 
+// schema
