@@ -140,3 +140,4 @@ const chatSchema = new Schema<IChat>({
 const Chat = mongoose.model<IChat>("Chat", chatSchema);
 
 export default Chat;
+
