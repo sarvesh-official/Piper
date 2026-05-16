@@ -122,3 +122,4 @@ const CourseSchema = new Schema<ICourse>({
 
 export const Course = mongoose.model<ICourse>('Course', CourseSchema);
 
+// populate
