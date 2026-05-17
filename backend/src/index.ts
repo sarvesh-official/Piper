@@ -63,3 +63,4 @@ Promise.all([connectToDatabase(), ensurePineconeIndex()])
 
 
 
+// cors
