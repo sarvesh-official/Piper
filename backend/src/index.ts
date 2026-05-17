@@ -62,3 +62,4 @@ Promise.all([connectToDatabase(), ensurePineconeIndex()])
   });
 
 
+
