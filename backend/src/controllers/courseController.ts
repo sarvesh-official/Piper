@@ -139,3 +139,4 @@ export const toggleCourseFavorite = async (req: Request, res: Response) => {
   }
 };
 
+// quiz generation
