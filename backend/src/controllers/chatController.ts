@@ -245,3 +245,4 @@ export const handleChatQuery = async (req: Request, res: Response) => {
     res.status(500).json({ error: `Failed to process query: ${error instanceof Error ? error.message : String(error)}` });
   }
 };
+
