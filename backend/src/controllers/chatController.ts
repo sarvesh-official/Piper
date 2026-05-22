@@ -246,3 +246,4 @@ export const handleChatQuery = async (req: Request, res: Response) => {
   }
 };
 
+// streaming support
