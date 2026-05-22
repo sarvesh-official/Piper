@@ -248,3 +248,4 @@ export const handleChatQuery = async (req: Request, res: Response) => {
 
 // streaming support
 // context window
+// rate limiting
