@@ -15,3 +15,4 @@ const upload = multer({
 router.post("/upload-files", upload.array("files", 3), handleMulterError, uploadFilesAndExtractText);
 
 export default router;
+// file size limit
