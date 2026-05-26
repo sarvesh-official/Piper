@@ -19,3 +19,4 @@ router.delete("/:chatId", requireAuth, deleteChat);
 router.post("/query", requireAuth, handleChatQuery);
 
 export default router;
+
