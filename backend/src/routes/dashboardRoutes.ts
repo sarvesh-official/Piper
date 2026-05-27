@@ -12,3 +12,4 @@ router.get("/courses", requireAuth, getDashboardCourseSummaries);
 
 export default router;
 
+// query params
