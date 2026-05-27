@@ -11,3 +11,4 @@ router.get("/chats", requireAuth, getDashboardChatSummaries);
 router.get("/courses", requireAuth, getDashboardCourseSummaries);
 
 export default router;
+
