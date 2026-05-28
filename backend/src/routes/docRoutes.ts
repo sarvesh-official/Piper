@@ -12,3 +12,4 @@ router.get("/uploaded", requireAuth, getUserUploadedDocuments);
 router.get("/generated",requireAuth, getUserGeneratedDocuments);
 
 export default router;
+
