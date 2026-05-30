@@ -33,3 +33,4 @@ router.put('/:id/status', updateCourseStatus);
 router.put('/:id/favorite', toggleCourseFavorite);
 
 export default router;
+
