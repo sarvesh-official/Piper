@@ -34,3 +34,4 @@ router.put('/:id/favorite', toggleCourseFavorite);
 
 export default router;
 
+// populate
