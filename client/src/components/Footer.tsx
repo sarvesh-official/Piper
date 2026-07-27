@@ -78,7 +78,7 @@ export const Footer = () => {
         </div>
 
         <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
-          Created with ❤️ by <a href="https://www.sarvee.dev" target="_blank" rel="noopener noreferrer" className="font-medium text-piper-blue dark:text-piper-cyan hover:underline">Sarvesh</a>
+          Created with ❤️ by <a href="https://sarvee.in" target="_blank" rel="noopener noreferrer" className="font-medium text-piper-blue dark:text-piper-cyan hover:underline">Sarvesh</a>
         </div>
       </div>
 
