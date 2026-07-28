@@ -168,7 +168,7 @@ export const queryChat = async (
     });
 
     const { text: answer } = await generateText({
-      model: getModel(),
+      model: await getModel(),
       messages,
       maxOutputTokens: 2048,
     });

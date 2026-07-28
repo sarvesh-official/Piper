@@ -177,7 +177,7 @@ async function generateModulesUsingAI(params: RoadmapGenerationParams): Promise<
     // Generate the course roadmap
     console.log(`Generating roadmap for "${params.title}" using AI...`);
     const { text: responseText } = await generateText({
-      model: getModel(),
+      model: await getModel(),
       prompt,
       maxOutputTokens: 4096,
     });

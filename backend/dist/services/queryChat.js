@@ -149,7 +149,7 @@ const queryChat = (userId_1, query_1, chatId_1, files_1, ...args_1) => __awaiter
             content: `Context: ${context}\n\nQuestion: ${query}`,
         });
         const { text: answer } = yield (0, llmClient_1.generateText)({
-            model: (0, llmClient_1.getModel)(),
+            model: yield (0, llmClient_1.getModel)(),
             messages,
             maxOutputTokens: 2048,
         });

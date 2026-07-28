@@ -112,7 +112,7 @@ export const generateQuizQuestions = async (
 
     // Generate the quiz questions
     const { text: responseText } = await generateText({
-      model: getModel(),
+      model: await getModel(),
       prompt,
       maxOutputTokens: 4096,
     });
