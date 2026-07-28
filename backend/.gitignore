@@ -1,6 +1,6 @@
 .vercel
 .env*
-dist/
 eng.traineddata
 
 backend/src/config/service-account.json
+backend/dist/config/service-account.json
