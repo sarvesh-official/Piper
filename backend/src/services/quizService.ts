@@ -1,5 +1,4 @@
-import { generateText } from "ai";
-import { getModel } from "../utils/llmClient";
+import { generateText, getModel } from "../utils/llmClient";
 import Chat from "../model/chatModel";
 import dotenv from "dotenv";
 

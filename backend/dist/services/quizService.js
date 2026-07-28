@@ -13,7 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateQuizQuestions = void 0;
-const ai_1 = require("ai");
 const llmClient_1 = require("../utils/llmClient");
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -88,7 +87,7 @@ const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, func
     ${combinedText}
     `;
         // Generate the quiz questions
-        const { text: responseText } = yield (0, ai_1.generateText)({
+        const { text: responseText } = yield (0, llmClient_1.generateText)({
             model: (0, llmClient_1.getModel)(),
             prompt,
             maxOutputTokens: 4096,

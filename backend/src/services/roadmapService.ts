@@ -1,5 +1,4 @@
-import { generateText } from "ai";
-import { getModel } from "../utils/llmClient";
+import { generateText, getModel } from "../utils/llmClient";
 import { Roadmap, IRoadmap, IRoadmapModule } from '../model/roadmapModel';
 import dotenv from "dotenv";
 

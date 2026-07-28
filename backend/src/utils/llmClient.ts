@@ -34,3 +34,21 @@ export const DEFAULT_LLM_MODEL = "llama-3.3-70b-versatile";
  * `generateText` / `streamText` functions.
  */
 export const getModel = (modelName: string = DEFAULT_LLM_MODEL) => groq(modelName);
+
+/**
+ * Lazy-loaded `generateText` from the Vercel AI SDK.
+ * The `ai` package is ESM-only, so we use a runtime dynamic import (kept as a
+ * native `import()` call via `eval`) instead of `require()` which fails for
+ * ESM modules in CommonJS contexts.
+ */
+export async function generateText(params: {
+  model: ReturnType<typeof getModel>;
+  prompt?: string;
+  messages?: any[];
+  maxOutputTokens?: number;
+  temperature?: number;
+}): Promise<{ text: string }> {
+  // Use eval to prevent TypeScript from compiling import() to require()
+  const ai = (await eval('import("ai")')) as typeof import("ai");
+  return ai.generateText(params as any);
+}

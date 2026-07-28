@@ -1,5 +1,5 @@
-import { generateText, ModelMessage } from "ai";
-import { getModel } from "../utils/llmClient";
+import { generateText, getModel } from "../utils/llmClient";
+import type { ModelMessage } from "ai";
 import { generateEmbeddings } from "./embeddingService";
 import { pinecone } from "./pineconeService";
 import dotenv from "dotenv";

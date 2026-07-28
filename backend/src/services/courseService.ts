@@ -1,6 +1,5 @@
 import { Course, ICourse, IModule, ILesson, CourseStatus } from '../model/courseModel';
-import { generateText } from "ai";
-import { getModel } from "../utils/llmClient";
+import { generateText, getModel } from "../utils/llmClient";
 import dotenv from "dotenv";
 import { getRoadmapById, linkRoadmapToCourse } from './roadmapService';
 

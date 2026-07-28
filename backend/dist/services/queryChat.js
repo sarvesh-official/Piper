@@ -13,7 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.queryChat = void 0;
-const ai_1 = require("ai");
 const llmClient_1 = require("../utils/llmClient");
 const embeddingService_1 = require("./embeddingService");
 const pineconeService_1 = require("./pineconeService");
@@ -149,7 +148,7 @@ const queryChat = (userId_1, query_1, chatId_1, files_1, ...args_1) => __awaiter
             role: "user",
             content: `Context: ${context}\n\nQuestion: ${query}`,
         });
-        const { text: answer } = yield (0, ai_1.generateText)({
+        const { text: answer } = yield (0, llmClient_1.generateText)({
             model: (0, llmClient_1.getModel)(),
             messages,
             maxOutputTokens: 2048,

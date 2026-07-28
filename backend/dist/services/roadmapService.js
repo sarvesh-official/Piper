@@ -17,7 +17,6 @@ exports.getRoadmapById = getRoadmapById;
 exports.regenerateRoadmap = regenerateRoadmap;
 exports.getUserRoadmaps = getUserRoadmaps;
 exports.linkRoadmapToCourse = linkRoadmapToCourse;
-const ai_1 = require("ai");
 const llmClient_1 = require("../utils/llmClient");
 const roadmapModel_1 = require("../model/roadmapModel");
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -175,7 +174,7 @@ function generateModulesUsingAI(params) {
     `;
             // Generate the course roadmap
             console.log(`Generating roadmap for "${params.title}" using AI...`);
-            const { text: responseText } = yield (0, ai_1.generateText)({
+            const { text: responseText } = yield (0, llmClient_1.generateText)({
                 model: (0, llmClient_1.getModel)(),
                 prompt,
                 maxOutputTokens: 4096,

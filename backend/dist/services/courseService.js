@@ -14,7 +14,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.courseService = exports.CourseService = void 0;
 const courseModel_1 = require("../model/courseModel");
-const ai_1 = require("ai");
 const llmClient_1 = require("../utils/llmClient");
 const dotenv_1 = __importDefault(require("dotenv"));
 const roadmapService_1 = require("./roadmapService");
@@ -230,7 +229,7 @@ class CourseService {
         Format your response using clear markdown headings, lists, and formatting to make the content readable and structured.
         Keep the overall length moderate - aim for content that can be read in the stated lesson duration.
         `;
-                    const { text: detailedContent } = yield (0, ai_1.generateText)({
+                    const { text: detailedContent } = yield (0, llmClient_1.generateText)({
                         model: (0, llmClient_1.getModel)(),
                         prompt,
                         maxOutputTokens: 8192,
@@ -288,7 +287,7 @@ class CourseService {
 
       Sample output format: "Learn to build responsive websites using HTML, CSS and JavaScript fundamentals."
       `;
-                const { text: responseText } = yield (0, ai_1.generateText)({
+                const { text: responseText } = yield (0, llmClient_1.generateText)({
                     model: (0, llmClient_1.getModel)(),
                     prompt,
                     maxOutputTokens: 200,
