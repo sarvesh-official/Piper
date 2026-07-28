@@ -7,6 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY as string);
 const EMBEDDING_MODELS = [
   process.env.GOOGLE_EMBEDDING_MODEL,
   "gemini-embedding-001",
+  "gemini-embedding-2",
   "text-embedding-004",
   "embedding-001",
 ].filter((model): model is string => Boolean(model));

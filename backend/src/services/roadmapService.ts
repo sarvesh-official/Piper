@@ -1,6 +1,5 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { JsonOutputParser } from "@langchain/core/output_parsers";
+import { generateText } from "ai";
+import { getModel } from "../utils/llmClient";
 import { Roadmap, IRoadmap, IRoadmapModule } from '../model/roadmapModel';
 import dotenv from "dotenv";
 
@@ -127,28 +126,21 @@ async function generateModulesUsingAI(params: RoadmapGenerationParams): Promise<
       interactivityFocus = "highly interactive content with engaging activities";
     }
 
-    // Initialize the model
-    const model = new ChatGoogleGenerativeAI({
-      modelName: "gemini-1.5-flash",
-      maxOutputTokens: 4096,
-      apiKey: process.env.COURSE_API_KEY
-    });
+    // Build the prompt with the course parameters
+    const prompt = `
+    You are an expert curriculum designer. Create a comprehensive learning roadmap for a course on ${params.title}
+    that is suitable for ${complexityLevel} level learners.
 
-    // Create an enhanced prompt template with properly escaped curly braces
-    const promptTemplate = PromptTemplate.fromTemplate(`
-    You are an expert curriculum designer. Create a comprehensive learning roadmap for a course on {title} 
-    that is suitable for {complexity} level learners.
+    The course should take approximately ${durationDescription} to complete and consist of ${moduleCount} modules.
+    Focus on creating a ${interactivityFocus} learning experience.
 
-    The course should take approximately {duration} to complete and consist of {moduleCount} modules.
-    Focus on creating a {interactivity} learning experience.
-
-    Include the following lesson types: {lessonTypes}.
+    Include the following lesson types: ${lessonTypes.join(", ")}.
 
     Each module should:
     - Build progressively on previous modules
     - Cover a distinct subtopic or skill area within the overall course topic
     - Include 3-6 lessons that logically progress from basic concepts to practical applications
-    
+
     For each lesson:
     - Include a clear, descriptive title that indicates what will be learned
     - Provide a realistic duration in minutes (typical lessons range from 10-30 minutes)
@@ -158,72 +150,60 @@ async function generateModulesUsingAI(params: RoadmapGenerationParams): Promise<
 
     Format your response as a valid JSON array following this exact structure:
     [
-      {{
+      {
         "id": 1,
         "title": "Module Title",
         "lessons": [
-          {{
+          {
             "type": "lesson",
             "title": "Lesson Title",
             "duration": "XX min",
             "description": "Brief description of the lesson content"
-          }},
-          {{
+          },
+          {
             "type": "code",
             "title": "Code Example Title",
             "duration": "XX min",
             "description": "Description of coding exercise"
-          }}
+          }
         ]
-      }}
+      }
     ]
-    
-    The content should be highly customized to the topic "{title}" and appropriate for {complexity} level learners.
-    Make the lesson durations realistic, with the total course duration approximately matching {duration}.
-    Ensure the final output is valid JSON that strictly follows the format specified above.
-    `);
 
-    // Create an output parser for JSON structure
-    const parser = new JsonOutputParser<GeneratedModuleContent[]>();
-    
-    // Generate the prompt with the course parameters
-    const prompt = await promptTemplate.format({
-      title: params.title,
-      complexity: complexityLevel,
-      duration: durationDescription,
-      moduleCount: moduleCount,
-      interactivity: interactivityFocus,
-      lessonTypes: lessonTypes.join(", ")
-    });
-    
+    The content should be highly customized to the topic "${params.title}" and appropriate for ${complexityLevel} level learners.
+    Make the lesson durations realistic, with the total course duration approximately matching ${durationDescription}.
+    Ensure the final output is valid JSON that strictly follows the format specified above.
+    `;
+
     // Generate the course roadmap
     console.log(`Generating roadmap for "${params.title}" using AI...`);
-    const response = await model.invoke(prompt);
-    
-    // Extract the text content from the response
-    const responseText = response.content.toString();
+    const { text: responseText } = await generateText({
+      model: getModel(),
+      prompt,
+      maxOutputTokens: 4096,
+    });
     console.log("AI response received for roadmap generation");
     
     // Parse the JSON response with enhanced error handling
     let generatedModules: GeneratedModuleContent[];
     try {
       // First attempt to parse directly
-      generatedModules = await parser.parse(responseText);
+      generatedModules = JSON.parse(responseText);
     } catch (parseError) {
       console.warn("Initial JSON parsing failed, attempting cleanup:", parseError);
-      
+
       // Try to extract JSON from markdown or clean up the response
       let cleanedJson = responseText;
-      
+
       // Extract JSON if wrapped in code blocks
       const jsonMatch = responseText.match(/```(?:json)?([\s\S]*?)```/);
       if (jsonMatch && jsonMatch[1]) {
         cleanedJson = jsonMatch[1].trim();
       }
-      
+
       // Remove any trailing commas in arrays/objects
       cleanedJson = cleanedJson.replace(/,(\s*[\]}])/g, '$1');
-      
+
       // Try to find JSON array in the text
       if (!cleanedJson.trim().startsWith('[')) {
         const arrayStart = cleanedJson.indexOf('[');
@@ -232,7 +212,7 @@ async function generateModulesUsingAI(params: RoadmapGenerationParams): Promise<
           cleanedJson = cleanedJson.substring(arrayStart, arrayEnd + 1);
         }
       }
-      
+
       try {
         // Parse the cleaned JSON
         generatedModules = JSON.parse(cleanedJson);

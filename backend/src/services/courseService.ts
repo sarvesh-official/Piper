@@ -1,6 +1,6 @@
 import { Course, ICourse, IModule, ILesson, CourseStatus } from '../model/courseModel';
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { PromptTemplate } from "@langchain/core/prompts";
+import { generateText } from "ai";
+import { getModel } from "../utils/llmClient";
 import dotenv from "dotenv";
 import { getRoadmapById, linkRoadmapToCourse } from './roadmapService';
 
@@ -159,28 +159,23 @@ export class CourseService {
   
   private async generateDetailedLessonsForModule(courseTitle: string, roadmapModule: any): Promise<ILesson[]> {
     try {
-      const model = new ChatGoogleGenerativeAI({
-        modelName: "gemini-1.5-flash",
-        maxOutputTokens: 8192 // We need more tokens for detailed content
-      });
-      
       // Process each lesson one by one for more detailed content
       const detailedLessons: ILesson[] = [];
-      
+
       for (const roadmapLesson of roadmapModule.lessons) {
         // Create a specific prompt for this lesson with emphasis on brevity
-        const promptTemplate = PromptTemplate.fromTemplate(`
+        const prompt = `
         You're creating detailed content for a lesson in a course about "${courseTitle}".
-        
+
         Module: ${roadmapModule.title}
         Lesson: ${roadmapLesson.title}
         Lesson Type: ${roadmapLesson.type}
-        
+
         ${roadmapLesson.description ? `Description: ${roadmapLesson.description}` : ''}
-        
+
         Please create concise, educational content for this lesson that is engaging and informative.
         Keep the content focused on the most important aspects of the topic.
-        
+
         ${roadmapLesson.type === 'lesson' ? `
         Write educational content that teaches the topic thoroughly. Include:
         - Brief introduction (1-2 sentences)
@@ -199,23 +194,23 @@ export class CourseService {
           // Your code here
           \`\`\`
         - Use proper indentation in code blocks for readability` : ''}
-        
+
         ${roadmapLesson.type === 'code' ? `
         Create a coding example with:
         - Brief explanation of the problem or task (1-2 sentences)
         - Solution as a code snippet using the exact format:
-        
+
         \`\`\`language class="piper-code-block"
         // Your code here with meaningful comments
         \`\`\`
 
         Where "language" should be replaced with the actual programming language (e.g., javascript, python, java, etc.)
-        
+
         - Brief explanation of how the code works (2-3 sentences)
         - Simple exercise for the student to try
 
         Make sure the code example is well-formatted with proper indentation and follows best practices.` : ''}
-        
+
         ${roadmapLesson.type === 'quiz' ? `
         Create a focused quiz with:
         - 5 multiple-choice questions
@@ -250,15 +245,17 @@ export class CourseService {
         Brief explanation of why option a is correct.
 
         Continue this exact format for all 5 questions.` : ''}
-        
+
         Format your response using clear markdown headings, lists, and formatting to make the content readable and structured.
         Keep the overall length moderate - aim for content that can be read in the stated lesson duration.
-        `, {});
-        
-        const prompt = await promptTemplate.format({});
-        const response = await model.invoke(prompt);
-        const detailedContent = response.content.toString();
-        
+        `;
+
+        const { text: detailedContent } = await generateText({
+          model: getModel(),
+          prompt,
+          maxOutputTokens: 8192,
+        });
+
         // Add the detailed lesson
         detailedLessons.push({
           type: roadmapLesson.type,
@@ -267,11 +264,11 @@ export class CourseService {
           content: detailedContent
         });
       }
-      
+
       return detailedLessons;
     } catch (error) {
       console.error("Error generating detailed content:", error);
-      
+
       // If there's an error, return the original lessons without detailed content
       return roadmapModule.lessons.map((lesson: any) => ({
         type: lesson.type,
@@ -308,25 +305,21 @@ export class CourseService {
       ).join(', ');
       
       // Use AI to generate a concise description
-      const model = new ChatGoogleGenerativeAI({
-        modelName: "gemini-1.5-flash",
-        maxOutputTokens: 200, // Limited tokens since we need a short description
-        apiKey: process.env.COURSE_API_KEY
-
-      });
-      
-      const promptTemplate = PromptTemplate.fromTemplate(`
+      const prompt = `
       Create a concise description (maximum 100 characters) for a ${level}-level course about "${title}".
       Do not use phrases like "This course" or "In this course".
       Start with an action verb when possible.
       Focus on what learners will gain from the course.
-      
+
       Sample output format: "Learn to build responsive websites using HTML, CSS and JavaScript fundamentals."
-      `);
-      
-      const prompt = await promptTemplate.format({});
-      const response = await model.invoke(prompt);
-      let generatedDescription = response.content.toString().trim();
+      `;
+
+      const { text: responseText } = await generateText({
+        model: getModel(),
+        prompt,
+        maxOutputTokens: 200,
+      });
+      let generatedDescription = responseText.trim();
       
       // Remove quotes if present
       generatedDescription = generatedDescription.replace(/^["']|["']$/g, '');
