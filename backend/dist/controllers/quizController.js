@@ -192,7 +192,7 @@ const saveQuizToDocuments = (req, res) => __awaiter(void 0, void 0, void 0, func
             res.status(404).json({ error: "Chat not found" });
             return;
         }
-        // Upload file to S3
+        // Upload file to Vercel Blob
         const fileBuffer = req.file.buffer;
         const fileKey = `quizzes/${userId}/${(0, uuid_1.v4)()}-${req.file.originalname}`;
         const contentType = req.file.mimetype;
@@ -222,7 +222,7 @@ const saveQuizToDocuments = (req, res) => __awaiter(void 0, void 0, void 0, func
         // Add the newly saved quiz
         chat.quiz.savedQuizzes.push({
             fileName: req.file.originalname,
-            fileUrl: uploadResult.Location,
+            fileUrl: uploadResult.url,
             fileKey: fileKey,
             quizTitle: quizTitle || "Quiz",
             savedAt: new Date(),
@@ -237,7 +237,7 @@ const saveQuizToDocuments = (req, res) => __awaiter(void 0, void 0, void 0, func
             message: "Quiz successfully saved to My Documents",
             savedQuiz: {
                 fileName: req.file.originalname,
-                fileUrl: uploadResult.Location,
+                fileUrl: uploadResult.url,
                 quizTitle: quizTitle || "Quiz"
             }
         });
