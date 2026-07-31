@@ -16,6 +16,7 @@ const docRoutes_1 = __importDefault(require("./routes/docRoutes"));
 const courseRoutes_1 = __importDefault(require("./routes/courseRoutes"));
 const roadmapRoutes_1 = __importDefault(require("./routes/roadmapRoutes"));
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
+const pineconeService_1 = require("./services/pineconeService");
 (0, dotenv_1.configDotenv)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -44,14 +45,14 @@ app.get("/", (req, res) => {
 app.use((err, req, res, next) => {
     res.status(500).json({ error: err.message });
 });
-// Connect to database before starting the server
-(0, utils_1.connectToDatabase)()
+// Connect to database and ensure Pinecone index before starting the server
+Promise.all([(0, utils_1.connectToDatabase)(), (0, pineconeService_1.ensurePineconeIndex)()])
     .then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
 })
     .catch(err => {
-    console.error('Failed to connect to database:', err);
+    console.error('Failed to initialize:', err);
     process.exit(1);
 });

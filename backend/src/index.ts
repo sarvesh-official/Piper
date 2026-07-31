@@ -10,7 +10,8 @@ import quizRoutes from "./routes/quizRoutes";
 import docRoutes from "./routes/docRoutes";
 import courseRoutes from "./routes/courseRoutes";
 import roadmapRoutes from "./routes/roadmapRoutes";
-import dashboardRoutes from "./routes/dashboardRoutes"; 
+import dashboardRoutes from "./routes/dashboardRoutes";
+import { ensurePineconeIndex } from "./services/pineconeService";
 
 configDotenv();
 
@@ -48,15 +49,15 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: err.message });
 });
 
-// Connect to database before starting the server
-connectToDatabase()
+// Connect to database and ensure Pinecone index before starting the server
+Promise.all([connectToDatabase(), ensurePineconeIndex()])
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })
   .catch(err => {
-    console.error('Failed to connect to database:', err);
+    console.error('Failed to initialize:', err);
     process.exit(1);
   });
 

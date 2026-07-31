@@ -12,18 +12,61 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteEmbeddingsFromPinecone = exports.pineconeIndex = exports.pinecone = void 0;
+exports.deleteEmbeddingsFromPinecone = exports.pineconeIndex = exports.ensurePineconeIndex = exports.pinecone = void 0;
 const pinecone_1 = require("@pinecone-database/pinecone");
 const dotenv_1 = __importDefault(require("dotenv"));
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 dotenv_1.default.config();
 // Initialize Pinecone client
 exports.pinecone = new pinecone_1.Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+const INDEX_NAME = "chat-app";
+const EMBEDDING_DIMENSION = 3072; // gemini-embedding-001 produces 3072-dim vectors
+/**
+ * Ensure the Pinecone index exists with the correct dimension.
+ * If it doesn't exist (or has the wrong dimension), create it.
+ */
+const ensurePineconeIndex = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const existingIndexes = yield exports.pinecone.listIndexes();
+        const indexInfo = (_a = existingIndexes.indexes) === null || _a === void 0 ? void 0 : _a.find((idx) => idx.name === INDEX_NAME);
+        if (indexInfo) {
+            // Index exists — check its dimension
+            const desc = yield exports.pinecone.describeIndex(INDEX_NAME);
+            if (desc.dimension === EMBEDDING_DIMENSION) {
+                console.log(`Pinecone index '${INDEX_NAME}' exists with correct dimension (${EMBEDDING_DIMENSION})`);
+                return;
+            }
+            // Wrong dimension — delete and recreate
+            console.log(`Pinecone index '${INDEX_NAME}' has dimension ${desc.dimension}, need ${EMBEDDING_DIMENSION}. Recreating...`);
+            yield exports.pinecone.deleteIndex(INDEX_NAME);
+            // Wait for deletion to complete
+            yield new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+        console.log(`Creating Pinecone index '${INDEX_NAME}' with dimension ${EMBEDDING_DIMENSION}...`);
+        yield exports.pinecone.createIndex({
+            name: INDEX_NAME,
+            dimension: EMBEDDING_DIMENSION,
+            spec: {
+                serverless: {
+                    cloud: "aws",
+                    region: "us-east-1",
+                },
+            },
+        });
+        console.log(`Pinecone index '${INDEX_NAME}' created successfully`);
+    }
+    catch (error) {
+        console.error("Error ensuring Pinecone index:", error);
+        // Don't throw — let the app start even if index creation fails
+    }
+});
+exports.ensurePineconeIndex = ensurePineconeIndex;
 /**
  * Access the Pinecone index by name.
  * Ensure the index name matches the one created in Pinecone's dashboard.
  */
-exports.pineconeIndex = exports.pinecone.index("chat-app");
+exports.pineconeIndex = exports.pinecone.index(INDEX_NAME);
 /**
  * Delete embeddings from Pinecone for a specific user and set of file keys.
  * @param userId - The ID of the user whose embeddings should be deleted.

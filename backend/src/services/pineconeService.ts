@@ -7,11 +7,55 @@ dotenv.config();
 // Initialize Pinecone client
 export const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 
+const INDEX_NAME = "chat-app";
+const EMBEDDING_DIMENSION = 3072; // gemini-embedding-001 produces 3072-dim vectors
+
+/**
+ * Ensure the Pinecone index exists with the correct dimension.
+ * If it doesn't exist (or has the wrong dimension), create it.
+ */
+export const ensurePineconeIndex = async (): Promise<void> => {
+  try {
+    const existingIndexes = await pinecone.listIndexes();
+    const indexInfo = existingIndexes.indexes?.find((idx) => idx.name === INDEX_NAME);
+
+    if (indexInfo) {
+      // Index exists — check its dimension
+      const desc = await pinecone.describeIndex(INDEX_NAME);
+      if (desc.dimension === EMBEDDING_DIMENSION) {
+        console.log(`Pinecone index '${INDEX_NAME}' exists with correct dimension (${EMBEDDING_DIMENSION})`);
+        return;
+      }
+      // Wrong dimension — delete and recreate
+      console.log(`Pinecone index '${INDEX_NAME}' has dimension ${desc.dimension}, need ${EMBEDDING_DIMENSION}. Recreating...`);
+      await pinecone.deleteIndex(INDEX_NAME);
+      // Wait for deletion to complete
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+
+    console.log(`Creating Pinecone index '${INDEX_NAME}' with dimension ${EMBEDDING_DIMENSION}...`);
+    await pinecone.createIndex({
+      name: INDEX_NAME,
+      dimension: EMBEDDING_DIMENSION,
+      spec: {
+        serverless: {
+          cloud: "aws",
+          region: "us-east-1",
+        },
+      },
+    });
+    console.log(`Pinecone index '${INDEX_NAME}' created successfully`);
+  } catch (error) {
+    console.error("Error ensuring Pinecone index:", error);
+    // Don't throw — let the app start even if index creation fails
+  }
+};
+
 /**
  * Access the Pinecone index by name.
  * Ensure the index name matches the one created in Pinecone's dashboard.
  */
-export const pineconeIndex = pinecone.index("chat-app");
+export const pineconeIndex = pinecone.index(INDEX_NAME);
 
 /**
  * Delete embeddings from Pinecone for a specific user and set of file keys.
