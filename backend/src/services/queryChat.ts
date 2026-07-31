@@ -182,6 +182,6 @@ export const queryChat = async (
     };
   } catch (error) {
     console.error("Error in queryChat:", error);
-    throw new Error("Failed to process your question. Please try again later.");
+    throw new Error(`Failed to process your question: ${error instanceof Error ? error.message : String(error)}`);
   }
 };

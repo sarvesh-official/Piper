@@ -214,7 +214,7 @@ const handleChatQuery = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     catch (error) {
         console.error("Error handling chat query:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: `Failed to process query: ${error instanceof Error ? error.message : String(error)}` });
     }
 });
 exports.handleChatQuery = handleChatQuery;

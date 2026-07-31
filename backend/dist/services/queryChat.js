@@ -162,7 +162,7 @@ const queryChat = (userId_1, query_1, chatId_1, files_1, ...args_1) => __awaiter
     }
     catch (error) {
         console.error("Error in queryChat:", error);
-        throw new Error("Failed to process your question. Please try again later.");
+        throw new Error(`Failed to process your question: ${error instanceof Error ? error.message : String(error)}`);
     }
 });
 exports.queryChat = queryChat;
