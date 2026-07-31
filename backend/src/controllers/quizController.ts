@@ -227,7 +227,7 @@ export const saveQuizToDocuments = async (req: Request, res: Response) => {
       return 
     }
 
-    // Upload file to S3
+    // Upload file to Vercel Blob
     const fileBuffer = req.file.buffer;
     const fileKey = `quizzes/${userId}/${uuidv4()}-${req.file.originalname}`;
     const contentType = req.file.mimetype;
@@ -260,7 +260,7 @@ export const saveQuizToDocuments = async (req: Request, res: Response) => {
     // Add the newly saved quiz
     chat.quiz.savedQuizzes.push({
       fileName: req.file.originalname,
-      fileUrl: uploadResult.Location,
+      fileUrl: uploadResult.url,
       fileKey: fileKey,
       quizTitle: quizTitle || "Quiz",
       savedAt: new Date(),
@@ -277,7 +277,7 @@ export const saveQuizToDocuments = async (req: Request, res: Response) => {
       message: "Quiz successfully saved to My Documents",
       savedQuiz: {
         fileName: req.file.originalname,
-        fileUrl: uploadResult.Location,
+        fileUrl: uploadResult.url,
         quizTitle: quizTitle || "Quiz"
       }
     });
