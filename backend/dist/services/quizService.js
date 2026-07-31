@@ -88,7 +88,6 @@ const generateQuizQuestions = (params) => __awaiter(void 0, void 0, void 0, func
     `;
         // Generate the quiz questions
         const { text: responseText } = yield (0, llmClient_1.generateText)({
-            model: yield (0, llmClient_1.getModel)(),
             prompt,
             maxOutputTokens: 4096,
         });

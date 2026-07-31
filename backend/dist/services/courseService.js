@@ -230,7 +230,6 @@ class CourseService {
         Keep the overall length moderate - aim for content that can be read in the stated lesson duration.
         `;
                     const { text: detailedContent } = yield (0, llmClient_1.generateText)({
-                        model: yield (0, llmClient_1.getModel)(),
                         prompt,
                         maxOutputTokens: 8192,
                     });
@@ -288,7 +287,6 @@ class CourseService {
       Sample output format: "Learn to build responsive websites using HTML, CSS and JavaScript fundamentals."
       `;
                 const { text: responseText } = yield (0, llmClient_1.generateText)({
-                    model: yield (0, llmClient_1.getModel)(),
                     prompt,
                     maxOutputTokens: 200,
                 });

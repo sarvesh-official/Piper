@@ -3,12 +3,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 /**
- * Groq LLM client (OpenAI-compatible endpoint).
- * Uses GROQ_API_KEY from env. Falls back to a secondary key if the primary
- * is rate-limited (set via GROQ_API_KEY_2).
+ * Groq LLM client using direct REST API calls (no SDK dependency).
  *
+ * Uses GROQ_API_KEY from env. Falls back to GROQ_API_KEY_2.
  * Default model: llama-3.3-70b-versatile
- * Other options: llama-3.1-8b-instant (faster, cheaper), deepseek-r1-distill-llama-70b
  */
 
 const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2;
@@ -17,40 +15,62 @@ if (!groqApiKey) {
   throw new Error("Environment variable GROQ_API_KEY (or GROQ_API_KEY_2) is required but not found");
 }
 
-/**
- * Default model identifier used across all LLM calls in Piper.
- * Change this single constant to switch models project-wide.
- */
 export const DEFAULT_LLM_MODEL = "llama-3.3-70b-versatile";
 
-// Load packages via require — both have CJS entry points
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { createOpenAICompatible } = require("@ai-sdk/openai-compatible");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { generateText: aiGenerateText } = require("ai");
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const groq = createOpenAICompatible({
-  name: "groq",
-  baseURL: "https://api.groq.com/openai/v1",
-  apiKey: groqApiKey!,
-});
-
-/**
- * Helper that returns the model reference for use with generateText.
- */
-export async function getModel(modelName: string = DEFAULT_LLM_MODEL) {
-  return groq(modelName);
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
 }
 
 /**
- * Wrapper around the Vercel AI SDK's generateText function.
+ * Generate text using Groq's OpenAI-compatible REST API.
+ * No SDK dependency — just fetch().
+ * Supports both `messages` (array) and `prompt` (string) params.
  */
 export async function generateText(params: {
-  model: any;
-  prompt?: string;
   messages?: any[];
+  prompt?: string;
   maxOutputTokens?: number;
   temperature?: number;
+  model?: string;
 }): Promise<{ text: string }> {
-  return aiGenerateText(params);
+  const model = params.model || DEFAULT_LLM_MODEL;
+
+  const messages = params.messages || [
+    { role: "user" as const, content: params.prompt || "" },
+  ];
+
+  const response = await fetch(GROQ_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${groqApiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: params.maxOutputTokens || 2048,
+      temperature: params.temperature ?? 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || "";
+
+  return { text };
+}
+
+/**
+ * Returns the model name for use with generateText.
+ * Kept for backward compatibility with callers that use getModel().
+ */
+export async function getModel(modelName: string = DEFAULT_LLM_MODEL) {
+  return modelName;
 }

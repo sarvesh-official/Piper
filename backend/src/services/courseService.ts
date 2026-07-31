@@ -250,7 +250,6 @@ export class CourseService {
         `;
 
         const { text: detailedContent } = await generateText({
-          model: await getModel(),
           prompt,
           maxOutputTokens: 8192,
         });
@@ -314,7 +313,6 @@ export class CourseService {
       `;
 
       const { text: responseText } = await generateText({
-        model: await getModel(),
         prompt,
         maxOutputTokens: 200,
       });

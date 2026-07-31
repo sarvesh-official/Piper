@@ -13,50 +13,62 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_LLM_MODEL = void 0;
-exports.getModel = getModel;
 exports.generateText = generateText;
+exports.getModel = getModel;
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 /**
- * Groq LLM client (OpenAI-compatible endpoint).
- * Uses GROQ_API_KEY from env. Falls back to a secondary key if the primary
- * is rate-limited (set via GROQ_API_KEY_2).
+ * Groq LLM client using direct REST API calls (no SDK dependency).
  *
+ * Uses GROQ_API_KEY from env. Falls back to GROQ_API_KEY_2.
  * Default model: llama-3.3-70b-versatile
- * Other options: llama-3.1-8b-instant (faster, cheaper), deepseek-r1-distill-llama-70b
  */
 const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2;
 if (!groqApiKey) {
     throw new Error("Environment variable GROQ_API_KEY (or GROQ_API_KEY_2) is required but not found");
 }
-/**
- * Default model identifier used across all LLM calls in Piper.
- * Change this single constant to switch models project-wide.
- */
 exports.DEFAULT_LLM_MODEL = "llama-3.3-70b-versatile";
-// Load packages via require — both have CJS entry points
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { createOpenAICompatible } = require("@ai-sdk/openai-compatible");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { generateText: aiGenerateText } = require("ai");
-const groq = createOpenAICompatible({
-    name: "groq",
-    baseURL: "https://api.groq.com/openai/v1",
-    apiKey: groqApiKey,
-});
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 /**
- * Helper that returns the model reference for use with generateText.
- */
-function getModel() {
-    return __awaiter(this, arguments, void 0, function* (modelName = exports.DEFAULT_LLM_MODEL) {
-        return groq(modelName);
-    });
-}
-/**
- * Wrapper around the Vercel AI SDK's generateText function.
+ * Generate text using Groq's OpenAI-compatible REST API.
+ * No SDK dependency — just fetch().
+ * Supports both `messages` (array) and `prompt` (string) params.
  */
 function generateText(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        return aiGenerateText(params);
+        var _a, _b, _c, _d;
+        const model = params.model || exports.DEFAULT_LLM_MODEL;
+        const messages = params.messages || [
+            { role: "user", content: params.prompt || "" },
+        ];
+        const response = yield fetch(GROQ_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${groqApiKey}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                max_tokens: params.maxOutputTokens || 2048,
+                temperature: (_a = params.temperature) !== null && _a !== void 0 ? _a : 0.7,
+            }),
+        });
+        if (!response.ok) {
+            const errorBody = yield response.text();
+            throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+        }
+        const data = yield response.json();
+        const text = ((_d = (_c = (_b = data.choices) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message) === null || _d === void 0 ? void 0 : _d.content) || "";
+        return { text };
+    });
+}
+/**
+ * Returns the model name for use with generateText.
+ * Kept for backward compatibility with callers that use getModel().
+ */
+function getModel() {
+    return __awaiter(this, arguments, void 0, function* (modelName = exports.DEFAULT_LLM_MODEL) {
+        return modelName;
     });
 }
