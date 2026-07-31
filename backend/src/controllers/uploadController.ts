@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { uploadFileToS3 } from "../services/s3Service";
 import Chat from "../model/chatModel";
 import { generateEmbeddings, storeChunkedEmbeddings, updateFileWithEmbeddingId } from "../services/embeddingService";
+import { ensurePineconeIndex } from "../services/pineconeService";
 import { extractTextFromCSV, extractTextFromExcel, extractTextFromImage, extractTextFromPPTX, extractTextFromPDF } from "../utils/fileProcessor";
 import mammoth from "mammoth";
 import multer from "multer";
@@ -44,6 +45,9 @@ export const uploadFilesAndExtractText = async (
       .json({ error: "Invalid request. Upload 1 to 3 files only." });
       return 
     }
+
+    // Ensure Pinecone index has correct dimensions before storing embeddings
+    await ensurePineconeIndex();
 
     const chatName =
       files.map((f) => f.originalname).join(", ").substring(0, 50) || "New Chat";

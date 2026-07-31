@@ -16,6 +16,7 @@ exports.uploadFilesAndExtractText = exports.handleMulterError = void 0;
 const s3Service_1 = require("../services/s3Service");
 const chatModel_1 = __importDefault(require("../model/chatModel"));
 const embeddingService_1 = require("../services/embeddingService");
+const pineconeService_1 = require("../services/pineconeService");
 const fileProcessor_1 = require("../utils/fileProcessor");
 const mammoth_1 = __importDefault(require("mammoth"));
 const multer_1 = __importDefault(require("multer"));
@@ -54,6 +55,8 @@ const uploadFilesAndExtractText = (req, res) => __awaiter(void 0, void 0, void 0
                 .json({ error: "Invalid request. Upload 1 to 3 files only." });
             return;
         }
+        // Ensure Pinecone index has correct dimensions before storing embeddings
+        yield (0, pineconeService_1.ensurePineconeIndex)();
         const chatName = files.map((f) => f.originalname).join(", ").substring(0, 50) || "New Chat";
         const processedFiles = yield Promise.all(files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
             const extractedText = yield extractTextFromFile(file.buffer, file.mimetype);

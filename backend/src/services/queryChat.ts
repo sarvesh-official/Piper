@@ -1,7 +1,7 @@
 import { generateText, getModel } from "../utils/llmClient";
 import type { ModelMessage } from "ai";
 import { generateEmbeddings } from "./embeddingService";
-import { pinecone } from "./pineconeService";
+import { pinecone, ensurePineconeIndex } from "./pineconeService";
 import dotenv from "dotenv";
 import { ChatMessage } from "../types/chat";
 
@@ -37,6 +37,9 @@ export const queryChat = async (
     files.forEach(file => {
       console.log(`Available file: ${file.fileName || 'unnamed'}, has extractedText: ${!!file.extractedText}, fileKey: ${file.fileKey || 'none'}`);
     });
+
+    // Ensure Pinecone index has correct dimensions
+    await ensurePineconeIndex();
 
     // Step 1: Generate embedding for the query
     // generateEmbeddings returns number[][], but we need the first embedding array

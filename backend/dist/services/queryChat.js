@@ -35,6 +35,8 @@ const queryChat = (userId_1, query_1, chatId_1, files_1, ...args_1) => __awaiter
         files.forEach(file => {
             console.log(`Available file: ${file.fileName || 'unnamed'}, has extractedText: ${!!file.extractedText}, fileKey: ${file.fileKey || 'none'}`);
         });
+        // Ensure Pinecone index has correct dimensions
+        yield (0, pineconeService_1.ensurePineconeIndex)();
         // Step 1: Generate embedding for the query
         // generateEmbeddings returns number[][], but we need the first embedding array
         const queryEmbeddingsResult = yield (0, embeddingService_1.generateEmbeddings)(query);
