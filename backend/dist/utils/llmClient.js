@@ -24,11 +24,6 @@ dotenv_1.default.config();
  *
  * Default model: llama-3.3-70b-versatile
  * Other options: llama-3.1-8b-instant (faster, cheaper), deepseek-r1-distill-llama-70b
- *
- * NOTE: Both `ai` and `@ai-sdk/openai-compatible` are ESM-only packages.
- * This module uses eval('import()') to load them at runtime as native ESM
- * dynamic imports, since TypeScript with module:commonjs compiles import()
- * to require() which fails for ESM modules.
  */
 const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2;
 if (!groqApiKey) {
@@ -39,44 +34,29 @@ if (!groqApiKey) {
  * Change this single constant to switch models project-wide.
  */
 exports.DEFAULT_LLM_MODEL = "llama-3.3-70b-versatile";
-// Lazy-loaded module references (populated on first use)
-let _groqProvider = null;
-let _aiGenerateText = null;
-/**
- * Load the ESM-only AI SDK packages using native dynamic import.
- * The eval() prevents TypeScript from compiling import() to require().
- */
-function loadAISDK() {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (_groqProvider && _aiGenerateText)
-            return;
-        const openaiCompatible = (yield eval('import("@ai-sdk/openai-compatible")'));
-        const ai = (yield eval('import("ai")'));
-        const groq = openaiCompatible.createOpenAICompatible({
-            name: "groq",
-            baseURL: "https://api.groq.com/openai/v1",
-            apiKey: groqApiKey,
-        });
-        _groqProvider = (modelName) => groq(modelName);
-        _aiGenerateText = ai.generateText;
-    });
-}
+// Load packages via require — both have CJS entry points
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { createOpenAICompatible } = require("@ai-sdk/openai-compatible");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { generateText: aiGenerateText } = require("ai");
+const groq = createOpenAICompatible({
+    name: "groq",
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: groqApiKey,
+});
 /**
  * Helper that returns the model reference for use with generateText.
  */
 function getModel() {
     return __awaiter(this, arguments, void 0, function* (modelName = exports.DEFAULT_LLM_MODEL) {
-        yield loadAISDK();
-        return _groqProvider(modelName);
+        return groq(modelName);
     });
 }
 /**
  * Wrapper around the Vercel AI SDK's generateText function.
- * Handles the ESM dynamic import internally.
  */
 function generateText(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield loadAISDK();
-        return _aiGenerateText(params);
+        return aiGenerateText(params);
     });
 }
