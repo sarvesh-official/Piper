@@ -1,64 +1,83 @@
 # Piper
 
-Piper is an AI-powered knowledge assistant that enables users to chat with documents, extract insights, and generate structured learning paths. It supports multiple document formats and provides intelligent course generation based on user prompts.
+Piper is an AI-powered document assistant. Upload documents (PDF, DOCX, TXT), then chat with them, search across them, and generate structured courses and quizzes from the content.
 
-🚀 **Features**
+## What it does
 
-* 📄 **Chat with Documents** – Upload files and ask questions to extract relevant information.
-* 🔍 **AI-Powered Search** – Quickly find key insights from large documents.
-* 📚 **Course Generation** – Enter a topic (e.g., "I want to learn Next.js"), and Piper will generate a structured course.
-* 🌐 **Multi-Format Support** – Supports PDF, DOCX, TXT, and more.
-* ⚡ **Fast & Scalable** – Built with modern web technologies.
-* 🛠 **TurboRepo Monorepo Setup** – Efficient project structure for frontend and backend.
+- **Chat with documents** — upload a file, ask questions, get answers grounded in the document's content via retrieval over embeddings
+- **Semantic search** — document chunks are embedded (Google Gemini embeddings) and stored in Pinecone, so queries retrieve relevant passages rather than keyword-matching
+- **Course & quiz generation** — generate structured learning paths and quizzes from a topic or from uploaded material
+- **Multi-model LLM support** — Gemini and Groq-backed models behind a provider layer
 
-🏗 **Tech Stack**
+## Tech stack
 
-* **Frontend:** Next.js (TypeScript, TailwindCSS, ShadCN)
-* **Backend:** Node.js (Express)
-* **Database:** MongoDB
-* **AI APIs:** Gemini, OpenAI, DeepSeek
-* **Storage:** Free cloud storage solutions (TBD)
-* **Search Engine:** Meilisearch (optional)
+- **Frontend:** Next.js, TypeScript, TailwindCSS, shadcn/ui
+- **Backend:** Node.js, Express (TypeScript)
+- **Auth:** Clerk
+- **Database:** MongoDB
+- **Vector store:** Pinecone
+- **File storage:** AWS S3
+- **LLMs:** Google Gemini, Groq
 
-📦 **Installation**
+## Repo layout
 
-**Prerequisites:**
+```
+backend/   Express API (TypeScript) — routes, controllers, services
+client/    Next.js frontend
+```
 
-* Node.js & npm
-* MongoDB instance (local or cloud)
-* Environment variables set up
+## Setup
 
-**Steps:**
+**Prerequisites:** Node.js 18+, npm, a MongoDB instance, and accounts for Clerk, AWS (S3), Pinecone, Google AI (Gemini), and Groq.
 
-1.  Clone the repository:
+### Backend
 
-    ```bash
-    git clone [https://github.com/yourusername/piper.git](https://github.com/yourusername/piper.git)
-    cd piper
-    ```
+```bash
+cd backend
+npm install
+cp .env.example .env   # or create .env manually
+npm run dev
+```
 
-2.  Install dependencies:
+`backend/.env` needs:
 
-    ```bash
-    npm install
-    ```
+```
+PORT=5000
+MONGO_URI=<mongodb connection string>
+CLERK_PUBLIC_KEY=...
+CLERK_SECRET_KEY=...
+AWS_REGION=...
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+PINECONE_API_KEY=...
+GOOGLE_API_KEY=...
+GOOGLE_EMBEDDING_MODEL=...
+GROQ_API_KEY=...
+FRONTEND_URL=http://localhost:3000
+```
 
-3.  Start the development servers:
+### Frontend
 
-    ```bash
-    npm run dev
-    ```
+```bash
+cd client
+npm install
+cp .env.example .env.local   # or create .env.local manually
+npm run dev
+```
 
-🔧 **Configuration**
+`client/.env.local` needs:
 
-Create a `.env` file and add necessary API keys for AI services, database connection, and storage.
+```
+NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+```
 
-📜 **License**
+## How it works
 
-This project is open-source under the MIT License.
+1. Uploads land in S3; the backend extracts text (Tesseract OCR for scanned/image docs) and chunks it.
+2. Chunks are embedded with Gemini's embedding model and written to Pinecone.
+3. Chat queries are embedded, matched against Pinecone, and the retrieved passages are passed to the LLM (Gemini or Groq) to produce grounded answers.
+4. Courses, quizzes, and roadmaps are generated through dedicated service modules that compose prompts over retrieved content.
 
-Feel free to contribute and improve Piper! 🚀
-<!-- Project: Piper AI -->
-// initial setup
-// env vars
-// architecture
+## License
+
+MIT
